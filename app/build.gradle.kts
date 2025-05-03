@@ -79,6 +79,10 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.messaging)
 
+    implementation(libs.material.icons.extended)
+    implementation(libs.google.auth)
+
+
     // Test
     kaptTest(libs.hilt.compiler)
     testImplementation(libs.junit)

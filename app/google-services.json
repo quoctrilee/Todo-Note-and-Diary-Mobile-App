@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "712471685484-ukfm9ho49kif35m0gsasqbs5knfues1m.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.todonotediary",
+            "certificate_hash": "81cf1e401b0669f1513eb0f40d09a73f874c49d9"
+          }
+        },
+        {
           "client_id": "712471685484-jadone5ck2fqss4s7k9qeisvin4s2mi8.apps.googleusercontent.com",
           "client_type": 3
         }

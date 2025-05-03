@@ -58,6 +58,10 @@ firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics
 firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
 firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore" }
 
+google-auth = { group = "com.google.android.gms", name = "play-services-auth", version = "20.7.0" }
+material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended", version = "1.5.4" }
+
+
 firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitExt" }
