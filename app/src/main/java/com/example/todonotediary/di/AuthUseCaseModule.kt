@@ -38,7 +38,7 @@ object AuthUseCaseModule {
 
     @Provides
     @Singleton
-    fun provideRegisterWithEmailUseCase(authRepository: AuthRepository): RegisterWithEmailUseCase {
-        return RegisterWithEmailUseCase(authRepository)
+    fun provideSaveUserToFirebaseUseCase(authRepository: AuthRepository): SaveUserToFirebaseUseCase {
+        return SaveUserToFirebaseUseCase(authRepository)
     }
 }

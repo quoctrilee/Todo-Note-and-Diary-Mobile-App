@@ -16,14 +16,14 @@ object AuthViewModelModule {
     fun provideAuthUseCases(
         getCurrentUserUseCase: GetCurrentUserUseCase,
         signInWithGoogleUseCase: SignInWithGoogleUseCase,
-        registerWithEmailUseCase: RegisterWithEmailUseCase,
+        saveUserToFirebaseUseCase: SaveUserToFirebaseUseCase,
         loginWithEmailUseCase: LoginWithEmailUseCase,
         signOutUseCase: SignOutUseCase
     ): AuthUseCases {
         return AuthUseCases(
             getCurrentUser = getCurrentUserUseCase,
             signInWithGoogle = signInWithGoogleUseCase,
-            registerWithEmail = registerWithEmailUseCase,
+            saveUserToFirebaseUseCase = saveUserToFirebaseUseCase,
             loginWithEmail = loginWithEmailUseCase,
             signOut = signOutUseCase
         )

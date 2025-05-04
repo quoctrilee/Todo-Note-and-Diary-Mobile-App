@@ -56,23 +56,31 @@ fun AuthScreen(
     val buttonColor = Color(0xFF4A7186) // Màu nút
     val accentColor = Color(0xFFEC9A73) // Màu nhấn
 
-    // Google Auth Handler
-    val scope = rememberCoroutineScope()
-    val googleAuthHandler = remember {
-        GoogleAuthHandler(
-            context = context,
-            viewModel = viewModel,
-            navController = navController,
-            coroutineScope = scope
-        )
+    // Cấu hình Google Sign-In
+    val gso = remember {
+        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken("712471685484-jadone5ck2fqss4s7k9qeisvin4s2mi8.apps.googleusercontent.com") // Thay bằng Client ID thực của bạn
+            .requestEmail()
+            .build()
     }
 
-    val googleSignInLauncher = rememberLauncherForActivityResult(
+    val googleSignInClient = remember {
+        GoogleSignIn.getClient(context, gso)
+    }
+
+    val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        googleAuthHandler.handleSignInResult(result)
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(ApiException::class.java)
+            account?.idToken?.let { token ->
+                viewModel.signInWithGoogle(token)
+            }
+        } catch (e: Exception) {
+            Toast.makeText(context, "Đăng nhập Google thất bại: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
     }
-
 
     // Handle state changes
     LaunchedEffect(googleSignInState) {
@@ -82,9 +90,18 @@ fun AuthScreen(
             }
             is GoogleSignInState.Success -> {
                 isLoading = false
-                // Chuyển hướng đến màn hình chính nếu đăng nhập thành công
+                // Người dùng đã tồn tại, chuyển hướng đến màn hình Todo
                 navController.navigate(Screen.Todo.route) {
                     popUpTo(Screen.Auth.route) { inclusive = true }
+                }
+                viewModel.resetStates()
+            }
+            is GoogleSignInState.NeedRegistration -> {
+                isLoading = false
+                // Người dùng chưa tồn tại, chuyển hướng đến màn hình Register và truyền email
+                val userEmail = (googleSignInState as GoogleSignInState.NeedRegistration).email
+                navController.navigate("${Screen.Register.route}?email=$userEmail") {
+                    popUpTo(Screen.Auth.route) { inclusive = false }
                 }
                 viewModel.resetStates()
             }
@@ -282,8 +299,8 @@ fun AuthScreen(
                 // Google Login Button
                 OutlinedButton(
                     onClick = {
-                        val signInIntent = googleAuthHandler.googleSignInClient.signInIntent
-                        googleSignInLauncher.launch(signInIntent)
+                        val signInIntent = googleSignInClient.signInIntent
+                        launcher.launch(signInIntent)
                     },
                     modifier = Modifier
                         .fillMaxWidth()

@@ -48,9 +48,15 @@ class AuthViewModel @Inject constructor(
             try {
                 val result = authUseCases.signInWithGoogle(idToken)
                 result.fold(
-                    onSuccess = { user ->
-                        _googleSignInState.value = GoogleSignInState.Success(user)
-                        _authState.value = AuthState.Authenticated(user)
+                    onSuccess = { (user, userExists) ->
+                        if (userExists) {
+                            // Người dùng đã tồn tại - Đăng nhập thành công
+                            _googleSignInState.value = GoogleSignInState.Success(user)
+                            _authState.value = AuthState.Authenticated(user)
+                        } else {
+                            // Người dùng chưa tồn tại - chuyển đến màn hình đăng ký
+                            _googleSignInState.value = GoogleSignInState.NeedRegistration(user.email ?: "")
+                        }
                     },
                     onFailure = { exception ->
                         _googleSignInState.value = GoogleSignInState.Error(exception.message ?: "Đăng nhập thất bại")
@@ -87,23 +93,20 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    fun registerWithEmail(email: String, password: String) {
-        if (email.isBlank() || password.isBlank()) {
-            _registerState.value = RegisterState.Error("Email và mật khẩu không được để trống")
+    fun register(email: String, password: String, displayName: String) {
+        if (email.isBlank() || password.isBlank() || displayName.isBlank()) {
+            _registerState.value = RegisterState.Error("Các trường thông tin không được để trống")
             return
         }
 
         _registerState.value = RegisterState.Loading
         viewModelScope.launch {
             try {
-                val result = authUseCases.registerWithEmail(email, password)
+                val result = authUseCases.saveUserToFirebaseUseCase(email, password, displayName)
                 result.fold(
                     onSuccess = { user ->
                         _registerState.value = RegisterState.Success(user)
                         _authState.value = AuthState.Authenticated(user)
-
-                        // Thêm code gọi UserRepository để lưu thông tin người dùng vào database nếu cần
-                        // Ví dụ: userRepository.saveUserInfo(user.uid, user.email, additionalInfo)
                     },
                     onFailure = { exception ->
                         _registerState.value = RegisterState.Error(exception.message ?: "Đăng ký thất bại")
@@ -114,6 +117,7 @@ class AuthViewModel @Inject constructor(
             }
         }
     }
+
 
     fun signOut() {
         viewModelScope.launch {
@@ -145,6 +149,7 @@ sealed class GoogleSignInState {
     object Initial : GoogleSignInState()
     object Loading : GoogleSignInState()
     data class Success(val user: FirebaseUser) : GoogleSignInState()
+    data class NeedRegistration(val email: String) : GoogleSignInState()
     data class Error(val message: String) : GoogleSignInState()
 }
 

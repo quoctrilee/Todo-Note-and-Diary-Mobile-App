@@ -248,7 +248,9 @@ fun RegisterScreen(
                             Toast.makeText(context, "Mật khẩu phải có ít nhất 6 ký tự", Toast.LENGTH_SHORT).show()
                             return@Button
                         }
-                        viewModel.registerWithEmail(userEmail, password)
+
+                        // Gọi hàm register để lưu thông tin người dùng
+                        viewModel.register(userEmail, password, displayName)
                     },
                     modifier = Modifier
                         .fillMaxWidth()

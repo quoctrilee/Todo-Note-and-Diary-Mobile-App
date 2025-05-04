@@ -7,7 +7,7 @@ import javax.inject.Inject
 class SignInWithGoogleUseCase @Inject constructor(
     private val authRepository: AuthRepository
 ) {
-    suspend operator fun invoke(idToken: String): Result<FirebaseUser> {
+    suspend operator fun invoke(idToken: String): Result<Pair<FirebaseUser, Boolean>> {
         return authRepository.signInwWithGoogle(idToken)
     }
 }

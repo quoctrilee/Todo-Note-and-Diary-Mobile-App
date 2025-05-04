@@ -14,64 +14,51 @@ class AuthRepositoryImpl @Inject constructor(
 ): AuthRepository {
     override fun getCrurrentUser(): FirebaseUser? = firebaseAuth.currentUser
 
-    override suspend fun signInwWithGoogle(idToken: String): Result<FirebaseUser> {
+    override suspend fun signInwWithGoogle(idToken: String): Result<Pair<FirebaseUser, Boolean>> {
         return try {
             val credential = GoogleAuthProvider.getCredential(idToken, null)
             val authResult = firebaseAuth.signInWithCredential(credential).await()
-
             // Get the user
             val user = authResult.user!!
-
             // Check if user exists in Firestore
             val userDoc = firestore.collection("users").document(user.uid).get().await()
+            val userExists = userDoc.exists()
 
-            if (!userDoc.exists()) {
-                // Create a minimal user profile
-                val userData = hashMapOf(
-                    "email" to user.email,
-                    "displayName" to user.displayName,
-                    "photoUrl" to (user.photoUrl?.toString() ?: ""),
-                    "createdAt" to System.currentTimeMillis()
-                )
-
-                // Save user data to Firestore
-                firestore.collection("users").document(user.uid)
-                    .set(userData)
-                    .await()
-            }
-
-            Result.success(user)
+            Result.success(Pair(user, userExists))
         } catch (e: Exception){
             Result.failure(e)
         }
     }
 
+
     override suspend fun signOut() {
         firebaseAuth.signOut()
     }
 
-    override suspend fun registerWithEmail(email: String, password: String): Result<FirebaseUser> {
+    override suspend fun saveUserToFirebase(email: String, password: String, displayName: String): Result<FirebaseUser> {
         return try {
-            val result = firebaseAuth.createUserWithEmailAndPassword(email, password).await()
-            val user = result.user!!
-
-            // Add user to Firestore with basic profile
+            // Lấy người dùng hiện tại đã đăng nhập (với Google)
+            val currentUser = firebaseAuth.currentUser
+                ?: return Result.failure(Exception("Không tìm thấy người dùng đã đăng nhập"))
+            // Lưu thông tin người dùng vào Firestore
             val userData = hashMapOf(
                 "email" to email,
-                "displayName" to "",
+                "displayName" to displayName,
+                "password" to password, // Lưu ý: Cân nhắc việc lưu trữ password
                 "createdAt" to System.currentTimeMillis()
             )
 
-            // Save user data to Firestore
-            firestore.collection("users").document(user.uid)
+            // Lưu dữ liệu người dùng vào Firestore sử dụng uid
+            firestore.collection("users").document(currentUser.uid)
                 .set(userData)
                 .await()
 
-            Result.success(user)
+            Result.success(currentUser)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
+
 
     override suspend fun loginWithEmail(email: String, password: String): Result<FirebaseUser> {
         return try {
