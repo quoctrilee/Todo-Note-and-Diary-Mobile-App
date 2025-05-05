@@ -1,6 +1,7 @@
 package com.example.todonotediary.data.repository
 
 import com.example.todonotediary.domain.repository.AuthRepository
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
@@ -40,11 +41,13 @@ class AuthRepositoryImpl @Inject constructor(
             // Lấy người dùng hiện tại đã đăng nhập (với Google)
             val currentUser = firebaseAuth.currentUser
                 ?: return Result.failure(Exception("Không tìm thấy người dùng đã đăng nhập"))
+
+            val credential = EmailAuthProvider.getCredential(email, password)
+            currentUser.linkWithCredential(credential).await()
             // Lưu thông tin người dùng vào Firestore
             val userData = hashMapOf(
                 "email" to email,
                 "displayName" to displayName,
-                "password" to password, // Lưu ý: Cân nhắc việc lưu trữ password
                 "createdAt" to System.currentTimeMillis()
             )
 
