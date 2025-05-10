@@ -9,7 +9,6 @@ class ToggleTodoCompletionUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(todoId: String): Result<Unit> {
         val todo = getTodoByIdUseCase(todoId) ?: return Result.failure(Exception("Todo not found"))
-        val updatedTodo = todo.copy(isCompleted = !todo.isCompleted)
-        return todoRepository.updateTodo(updatedTodo)
+        return todoRepository.updateTodoCompletionStatus(todoId, !todo.isCompleted)
     }
 }

@@ -127,7 +127,7 @@ fun AuthScreen(
             is EmailSignInState.Success -> {
                 isLoading = false
                 // Chuyển hướng đến màn hình chính nếu đăng nhập thành công
-                navController.navigate(Screen.Todo.route) {
+                navController.navigate(Screen.MainScreen.route) {
                     popUpTo(Screen.Auth.route) { inclusive = true }
                 }
                 viewModel.resetStates()
@@ -149,7 +149,7 @@ fun AuthScreen(
     // Check if already authenticated
     LaunchedEffect(authState) {
         if (authState is AuthState.Authenticated) {
-            navController.navigate(Screen.Todo.route) {
+            navController.navigate(Screen.MainScreen.route) {
                 popUpTo(Screen.Auth.route) { inclusive = true }
             }
         }

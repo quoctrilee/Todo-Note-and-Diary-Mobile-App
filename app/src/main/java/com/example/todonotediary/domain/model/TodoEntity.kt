@@ -2,18 +2,27 @@ package com.example.todonotediary.domain.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.google.firebase.firestore.PropertyName
 
 @Entity(tableName = "todos")
 data class TodoEntity(
     @PrimaryKey
-    val id: String = "",
-    val title: String,
-    val description: String,
-    val isCompleted: Boolean = false,
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis(),
-    val deadline: Long? = null,
-    val userId: String,
-    val lastSyncTimestamp: Long = 0,
-    val isDeleted: Boolean = false
+    var id: String = "",
+    var userId: String = "",
+    var title: String = "",
+    var description: String = "",
+
+    @get:PropertyName("isCompleted")
+    @set:PropertyName("isCompleted")
+    var isCompleted: Boolean = false,
+
+    var createdAt: Long = 0,
+    var updatedAt: Long = 0,
+    var startAt: Long? = null,
+    var deadline: Long? = null,
+    var lastSyncTimestamp: Long = 0,
+
+    @get:PropertyName("isDeleted")
+    @set:PropertyName("isDeleted")
+    var isDeleted: Boolean = false
 )

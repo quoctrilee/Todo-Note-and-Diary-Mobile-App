@@ -22,11 +22,12 @@ object TodoUseCaseModule {
         return TodoUseCases(
             getTodos = GetTodosUseCase(repository),
             getTodoById = getTodoByIdUseCase,
+            getTodoUpcoming = GetTodoUpcomingUseCase(repository),
+            getTodoPast = GetTodoPastUseCase(repository),
             addTodo = AddTodoUseCase(repository),
             updateTodo = UpdateTodoUseCase(repository),
             deleteTodo = DeleteTodoUseCase(repository),
-            syncTodos = SyncTodosUseCase(repository),
-            toggleTodoCompletion = ToggleTodoCompletionUseCase(repository, getTodoByIdUseCase)
+            toggleTodoCompletion = ToggleTodoCompletionUseCase(repository, getTodoByIdUseCase),
         )
     }
 }

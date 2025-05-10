@@ -6,10 +6,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.todonotediary.presentation.MainScreen
+import com.example.todonotediary.presentation.MainScreenWithNavigation
 import com.example.todonotediary.presentation.auth.AuthScreen
 import com.example.todonotediary.presentation.auth.RegisterScreen
 import com.example.todonotediary.presentation.splash.SplashScreen
+import com.example.todonotediary.presentation.todo.AddTodoScreen
 
 @Composable
 fun AppNavigation() {
@@ -38,8 +39,12 @@ fun AppNavigation() {
             val email = backStackEntry.arguments?.getString("email")
             RegisterScreen(navController = navController, email = email)
         }
-        composable(Screen.Todo.route) {
-            MainScreen()
+        composable(Screen.MainScreen.route) {
+            MainScreenWithNavigation(navController = navController)
+        }
+
+        composable(Screen.AddTodo.route) {
+            AddTodoScreen(navController = navController, onNavigateBack = { navController.popBackStack() })
         }
     }
 }
