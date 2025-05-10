@@ -1,6 +1,7 @@
 package com.example.todonotediary.presentation.todo
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -306,7 +307,21 @@ fun TodoItem(
     onCompletionToggle: () -> Unit,
     onDelete: () -> Unit
 ) {
-    val dateFormatter = SimpleDateFormat("HH:mm", Locale.getDefault())
+    // Time formatters
+    val timeFormatter = SimpleDateFormat("HH:mm", Locale.getDefault())
+    val dateFormatter = SimpleDateFormat("dd/MM", Locale.getDefault())
+    val dateYearFormatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+
+    // Check if start and end dates are on the same day
+    val isSameDay = todo.startAt?.let { startTime ->
+        todo.deadline?.let { endTime ->
+            val startCal = Calendar.getInstance().apply { timeInMillis = startTime }
+            val endCal = Calendar.getInstance().apply { timeInMillis = endTime }
+
+            startCal.get(Calendar.YEAR) == endCal.get(Calendar.YEAR) &&
+                    startCal.get(Calendar.DAY_OF_YEAR) == endCal.get(Calendar.DAY_OF_YEAR)
+        }
+    } ?: true // Default to true if either start or end time is null
 
     // Set background color based on task status and tab
     val (startColor, endColor) = when {
@@ -383,30 +398,78 @@ fun TodoItem(
                         )
                     }
 
-                    // Time section
+                    // Time section with enhanced styling
                     Spacer(modifier = Modifier.height(8.dp))
-                    Row {
-                        todo.startAt?.let { startTime ->
-                            Text(
-                                text = dateFormatter.format(Date(startTime)),
-                                color = Color.White.copy(alpha = 0.7f),
-                                fontSize = 14.sp
-                            )
 
-                            Text(
-                                text = " - ",
-                                color = Color.White.copy(alpha = 0.7f),
-                                fontSize = 14.sp
-                            )
-                        }
+                    // Only display time section if at least one of startAt or deadline is not null
+                    if (todo.startAt != null || todo.deadline != null) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color.White.copy(alpha = 0.15f))
+                                .border(
+                                    width = 1.dp,
+                                    color = Color.White.copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                // Display different formats based on whether it's same day or multiday
+                                if (isSameDay) {
+                                    // Same day format: just show times
+                                    todo.startAt?.let { startTime ->
+                                        Text(
+                                            text = timeFormatter.format(Date(startTime)),
+                                            color = Color.White.copy(alpha = 0.9f),
+                                            fontSize = 14.sp
+                                        )
 
-                        todo.deadline?.let { endTime ->
-                            Text(
-                                text = dateFormatter.format(Date(endTime)),
-                                color = Color.White.copy(alpha = 0.8f),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium
-                            )
+                                        if (todo.deadline != null) {
+                                            Text(
+                                                text = " - ",
+                                                color = Color.White.copy(alpha = 0.7f),
+                                                fontSize = 14.sp
+                                            )
+                                        }
+                                    }
+
+                                    todo.deadline?.let { endTime ->
+                                        Text(
+                                            text = timeFormatter.format(Date(endTime)),
+                                            color = Color.White.copy(alpha = 0.9f),
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                } else {
+                                    // Different days format: show dates and times
+                                    todo.startAt?.let { startTime ->
+                                        Text(
+                                            text = dateFormatter.format(Date(startTime)) + " " + timeFormatter.format(Date(startTime)),
+                                            color = Color.White.copy(alpha = 0.9f),
+                                            fontSize = 14.sp
+                                        )
+
+                                        if (todo.deadline != null) {
+                                            Text(
+                                                text = " - ",
+                                                color = Color.White.copy(alpha = 0.7f),
+                                                fontSize = 14.sp
+                                            )
+                                        }
+                                    }
+
+                                    todo.deadline?.let { endTime ->
+                                        Text(
+                                            text = dateFormatter.format(Date(endTime)) + " " + timeFormatter.format(Date(endTime)),
+                                            color = Color.White.copy(alpha = 0.9f),
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }

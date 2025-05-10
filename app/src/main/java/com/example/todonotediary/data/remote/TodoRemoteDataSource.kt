@@ -35,7 +35,6 @@ class TodoRemoteDataSource @Inject constructor(
                 }
             todos
         } catch (e: Exception) {
-            Log.e(TAG, "Error fetching todos: ${e.message}")
             emptyList()
         }
     }
@@ -61,8 +60,6 @@ class TodoRemoteDataSource @Inject constructor(
         val currentTime = System.currentTimeMillis()
 
         return try {
-            Log.d(TAG, "getTodoUpcoming - userId: $userId, selectedDate: $selectedDate")
-            Log.d(TAG, "startOfDay: $startOfDay (${formatDateTime(startOfDay)}), endOfDay: $endOfDay (${formatDateTime(endOfDay)})")
 
             // Lấy tất cả todos của người dùng mà chưa bị xóa
             val todos = firestore.collection(COLLECTION_TODOS)
@@ -80,8 +77,6 @@ class TodoRemoteDataSource @Inject constructor(
                 val todoStartAt = todo.startAt ?: 0
                 val todoDeadline = todo.deadline ?: Long.MAX_VALUE
                 val todoIsCompleted = todo.isCompleted
-
-                // Kiểm tra todo có thuộc về ngày đã chọn không
                 val belongsToSelectedDay = (todoStartAt >= startOfDay && todoStartAt < endOfDay) ||
                         (todoDeadline >= startOfDay && todoDeadline < endOfDay)
 
@@ -91,15 +86,9 @@ class TodoRemoteDataSource @Inject constructor(
                 belongsToSelectedDay && isUpcoming
             }
 
-            Log.d(TAG, "getTodoUpcoming - Tổng số todos: ${todos.size}, sau khi lọc: ${filteredTodos.size}")
-            filteredTodos.forEach { todo ->
-                Log.d(TAG, "Todo: ${todo.id}, isCompleted: ${todo.isCompleted}")
-                Log.d(TAG, "Upcoming Todo: ${todo.id}, ${todo.title}, deadline: ${formatDateTime(todo.deadline ?: 0)}")
-            }
 
             filteredTodos
         } catch (e: Exception) {
-            Log.e(TAG, "Lỗi trong getTodoUpcoming: ${e.message}", e)
             emptyList()
         }
     }
@@ -109,9 +98,6 @@ class TodoRemoteDataSource @Inject constructor(
         val currentTime = System.currentTimeMillis()
 
         return try {
-            Log.d(TAG, "getTodoPast - userId: $userId, selectedDate: $selectedDate")
-            Log.d(TAG, "startOfDay: $startOfDay (${formatDateTime(startOfDay)}), endOfDay: $endOfDay (${formatDateTime(endOfDay)})")
-
             // Lấy tất cả todos của người dùng mà chưa bị xóa
             val todos = firestore.collection(COLLECTION_TODOS)
                 .whereEqualTo("userId", userId)
@@ -128,8 +114,6 @@ class TodoRemoteDataSource @Inject constructor(
                 val todoStartAt = todo.startAt ?: 0
                 val todoDeadline = todo.deadline ?: 0  // Nếu không có deadline, coi như đã quá hạn
                 val todoIsCompleted = todo.isCompleted
-
-                // Kiểm tra todo có thuộc về ngày đã chọn không
                 val belongsToSelectedDay = (todoStartAt >= startOfDay && todoStartAt < endOfDay) ||
                         (todoDeadline >= startOfDay && todoDeadline < endOfDay)
 
@@ -139,15 +123,8 @@ class TodoRemoteDataSource @Inject constructor(
                 belongsToSelectedDay && isPast
             }
 
-            Log.d(TAG, "getTodoPast - Tổng số todos: ${todos.size}, sau khi lọc: ${filteredTodos.size}")
-            filteredTodos.forEach { todo ->
-                Log.d(TAG, "Todo: ${todo.id}, isCompleted: ${todo.isCompleted}")
-                Log.d(TAG, "Past Todo: ${todo.id}, ${todo.title}, deadline: ${formatDateTime(todo.deadline ?: 0)}")
-            }
-
-            filteredTodos
+        filteredTodos
         } catch (e: Exception) {
-            Log.e(TAG, "Lỗi trong getTodoPast: ${e.message}", e)
             emptyList()
         }
     }
@@ -163,7 +140,6 @@ class TodoRemoteDataSource @Inject constructor(
                 id = document.id
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Error fetching todo by ID: ${e.message}")
             null
         }
     }

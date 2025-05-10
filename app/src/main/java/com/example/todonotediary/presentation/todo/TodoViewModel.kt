@@ -50,8 +50,6 @@ class TodoViewModel @Inject constructor(
         selectDate(getDayName(dayOfWeek), dayOfMonth.toString(), currentDate)
     }
 
-
-
     /**
      * Switch between Upcoming and Past tabs
      */
@@ -67,16 +65,28 @@ class TodoViewModel @Inject constructor(
             when (tab) {
                 TodoTab.UPCOMING -> {
                     todoUseCases.getTodoUpcoming(userId, selectedDate).collectLatest { todos ->
+                        // Sort todos: first by start time, then by deadline
+                        val sortedTodos = todos.sortedWith(compareBy(
+                            { it.startAt ?: Long.MAX_VALUE },  // Sort by start time first
+                            { it.deadline ?: Long.MAX_VALUE }  // Then by deadline
+                        ))
+
                         _todoState.value = _todoState.value.copy(
-                            todoList = todos,
+                            todoList = sortedTodos,
                             isLoading = false
                         )
                     }
                 }
                 TodoTab.LAST -> {
                     todoUseCases.getTodoPast(userId, selectedDate).collectLatest { todos ->
+                        // For past tasks, show completed items first, then sort by deadline
+                        val sortedTodos = todos.sortedWith(
+                            compareByDescending<TodoEntity> { it.isCompleted }
+                                .thenBy { it.deadline ?: Long.MAX_VALUE }
+                        )
+
                         _todoState.value = _todoState.value.copy(
-                            todoList = todos,
+                            todoList = sortedTodos,
                             isLoading = false
                         )
                     }
@@ -85,9 +95,9 @@ class TodoViewModel @Inject constructor(
         }
     }
 
-
     /**
      * Select a specific date to display todos
+     * Enhanced to handle multi-day tasks
      */
     fun selectDate(dayOfWeek: String, dayNumber: String, date: Long) {
         viewModelScope.launch {
@@ -102,7 +112,6 @@ class TodoViewModel @Inject constructor(
             switchTab(_todoState.value.selectedTab)
         }
     }
-
 
     /**
      * Update the completion status of a task
@@ -132,7 +141,6 @@ class TodoViewModel @Inject constructor(
         }
     }
 
-
     /**
      * Reload task list based on current tab
      */
@@ -145,6 +153,7 @@ class TodoViewModel @Inject constructor(
 
     /**
      * Create list of days in the week
+     * Extended to show 14 days instead of 7
      */
     fun generateWeekDays(): List<DayItem> {
         val days = mutableListOf<DayItem>()
@@ -192,6 +201,17 @@ class TodoViewModel @Inject constructor(
             Calendar.SUNDAY -> "Sun"
             else -> ""
         }
+    }
+
+    /**
+     * Utility function to check if two timestamps are on the same day
+     */
+    fun areSameDay(timestamp1: Long, timestamp2: Long): Boolean {
+        val cal1 = Calendar.getInstance().apply { timeInMillis = timestamp1 }
+        val cal2 = Calendar.getInstance().apply { timeInMillis = timestamp2 }
+
+        return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
+                cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
     }
 }
 
