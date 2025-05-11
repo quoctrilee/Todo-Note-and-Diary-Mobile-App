@@ -79,10 +79,11 @@ fun NoteScreen(
             )
 
             Spacer(modifier = Modifier.height(16.dp))
-
+            val categories by viewModel.categories.collectAsState()
             // Danh mục
             CategoriesRow(
-                categories = viewModel.categories,
+
+                categories = categories,
                 selectedCategory = selectedCategory,
                 onCategorySelected = { viewModel.onEvent(NotesEvent.CategorySelected(it)) }
             )

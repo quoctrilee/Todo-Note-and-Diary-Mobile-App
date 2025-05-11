@@ -32,9 +32,9 @@ class NoteViewModel @Inject constructor(
     private val _selectedCategory = MutableStateFlow("all")
     val selectedCategory: StateFlow<String> = _selectedCategory
 
-    // Danh sách danh mục mặc định và từ Firestore
-    private val _categories = mutableListOf("all")
-    val categories: List<String> get() = _categories
+    private val _categories = MutableStateFlow<List<String>>(listOf("all"))
+    val categories: StateFlow<List<String>> = _categories
+
 
     private var getNotesJob: Job? = null
     private var searchJob: Job? = null
@@ -86,16 +86,13 @@ class NoteViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val firestoreCategories = noteUseCases.getCategoryUseCase(userId)
-                _categories.clear()
-                _categories.add("all")  // Luôn có danh mục "all"
-                _categories.addAll(firestoreCategories)
+                _categories.value = listOf("all") + firestoreCategories
             } catch (e: Exception) {
-                // Nếu có lỗi, đảm bảo luôn có danh mục "all"
-                _categories.clear()
-                _categories.add("all")
+                _categories.value = listOf("all")
             }
         }
     }
+
 
     // Lấy tất cả ghi chú của người dùng
     private fun getNotes() {
