@@ -7,5 +7,7 @@ data class NoteUseCases(
     val getNotesByCategory: GetNotesByCategoryUseCase,
     val getNotes: GetNotesUseCase,
     val syncNotes: SyncNotesUseCase,
-    val updateNote: UpdateNoteUseCase
+    val updateNote: UpdateNoteUseCase,
+    val searchNotesByTitleOrContentUseCase: SearchNotesByTitleOrContentUseCase,
+    val getCategoryUseCase: GetCategoryUseCase
 )

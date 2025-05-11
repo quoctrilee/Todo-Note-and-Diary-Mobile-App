@@ -6,24 +6,29 @@ import java.util.UUID
 import javax.inject.Inject
 
 class AddNoteUseCase @Inject constructor(
-    private val noteRepository: NoteRepository
+    private val repository: NoteRepository
 ) {
     suspend operator fun invoke(
         title: String,
         content: String,
         userId: String,
-        category: String = "General"
+        category: String,
+        backgroundColor: String
     ): Result<NoteEntity> {
+        val noteId = UUID.randomUUID().toString()
+        val currentTime = System.currentTimeMillis()
+
         val note = NoteEntity(
-            id = UUID.randomUUID().toString(),
+            id = noteId,
             title = title,
             content = content,
-            category = category,
-            createdAt = System.currentTimeMillis(),
             userId = userId,
-            lastSyncTimestamp = 0,
-            isDeleted = false
+            category = category,
+            createdAt = currentTime,
+            updatedAt = currentTime,
+            background_color = backgroundColor // Lưu màu nền
         )
-        return noteRepository.addNote(note)
+
+        return repository.addNote(note)
     }
 }

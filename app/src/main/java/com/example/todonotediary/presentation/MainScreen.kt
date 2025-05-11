@@ -46,7 +46,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.todonotediary.R
 import com.example.todonotediary.presentation.diary.DiaryScreen
 import com.example.todonotediary.presentation.navigation.Screen
-import com.example.todonotediary.presentation.note.NotesScreen
+import com.example.todonotediary.presentation.note.NoteScreen
 import com.example.todonotediary.presentation.todo.TodoScreen
 
 @Composable
@@ -64,7 +64,7 @@ fun MainScreen(parentNavController: NavHostController) {
                 startDestination = Screen.Todo.route
             ) {
                 composable(Screen.Todo.route) { TodoScreen() }
-                composable(Screen.Notes.route) { NotesScreen() }
+                composable(Screen.Note.route) { NoteScreen() }
                 composable(Screen.Diary.route) { DiaryScreen() }
             }
         }
@@ -152,10 +152,10 @@ fun TopNavigationBar(navController: NavHostController, parentNavController: NavH
                                 // Sử dụng parentNavController để điều hướng đến AddTodo
                                 parentNavController.navigate(Screen.AddTodo.route)
                             }
-//                            Screen.Notes.route -> {
-//                                // Điều hướng tới màn hình tạo Note mới
-//                                parentNavController.navigate("create_note")
-//                            }
+                            Screen.Note.route -> {
+                                // Điều hướng tới màn hình tạo Note mới
+                                parentNavController.navigate(Screen.AddNote.route)
+                            }
 //
 //                            Screen.Diary.route -> {
 //                                // Điều hướng tới màn hình tạo Diary mới
@@ -186,7 +186,7 @@ fun TopNavigationBar(navController: NavHostController, parentNavController: NavH
 fun BottomNavigationBar(navController: NavHostController) {
     val items = listOf(
         NavigationItem("Todo", Icons.Default.DateRange, Screen.Todo.route),
-        NavigationItem("Notes", Icons.Default.Create, Screen.Notes.route),
+        NavigationItem("Notes", Icons.Default.Create, Screen.Note.route),
         NavigationItem("Diary", Icons.Default.DateRange, Screen.Diary.route)
     )
 

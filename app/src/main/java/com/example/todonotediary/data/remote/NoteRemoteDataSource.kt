@@ -31,6 +31,65 @@ class NoteRemoteDataSource @Inject constructor(
         }
     }
 
+    suspend fun getCategories(userId: String): List<String> {
+        return try {
+            firestore.collection("notes")
+                .whereEqualTo("userId", userId)
+                .whereEqualTo("isDeleted", false)
+                .get()
+                .await()
+                .documents
+                .mapNotNull { it.getString("category") }
+                .distinct()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+
+    suspend fun searchByTitleOrContent(userId: String, search: String): List<NoteEntity> {
+        return try {
+            val keyword = search.trim().lowercase()
+
+            firestore.collection(COLLECTION_NOTES)
+                .whereEqualTo("userId", userId)
+                .whereEqualTo("isDeleted", false)
+                .get()
+                .await()
+                .documents
+                .mapNotNull { document ->
+                    document.toObject(NoteEntity::class.java)?.copy(id = document.id)
+                }
+                .filter { note ->
+                    note.title?.lowercase()?.contains(keyword) == true ||
+                            note.content?.lowercase()?.contains(keyword) == true
+                }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+
+    suspend fun getNotesByCategory(userId: String, category: String): List<NoteEntity> {
+        return try {
+            firestore.collection(COLLECTION_NOTES)
+                .whereEqualTo("userId", userId)
+                .whereEqualTo("category", category)
+                .whereEqualTo("isDeleted", false)
+                .get()
+                .await()
+                .documents
+                .mapNotNull { document ->
+                    document.toObject(NoteEntity::class.java)?.copy(
+                        id = document.id
+                    )
+                }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+
     // Lấy một note theo id
     suspend fun getNoteById(noteId: String): NoteEntity? {
         return try {

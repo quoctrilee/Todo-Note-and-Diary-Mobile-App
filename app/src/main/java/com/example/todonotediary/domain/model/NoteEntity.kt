@@ -2,18 +2,23 @@ package com.example.todonotediary.domain.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.google.firebase.firestore.PropertyName
 
 @Entity(tableName = "notes")
 data class NoteEntity(
     @PrimaryKey
-    val id: String,
-    val title: String,
-    val content: String,
-    val category: String = "General",
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis(),
-    val userId: String,
-    val lastSyncTimestamp: Long = 0,
-    val isDeleted: Boolean = false
+    var id: String = "",
+    var userId: String = "",
+    var title: String = "",
+    var content: String = "",
+    var category: String = "",
+    var background_color: String = "",
+    var createdAt: Long = 0,
+    var updatedAt: Long = 0,
+    var lastSyncTimestamp: Long = 0,
 
+    @get:PropertyName("isDeleted")
+    @set:PropertyName("isDeleted")
+    var isDeleted: Boolean = false
 )
+

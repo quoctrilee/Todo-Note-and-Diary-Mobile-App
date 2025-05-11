@@ -1,83 +1,70 @@
 package com.example.todonotediary.data.repository
 
-import com.example.todonotediary.data.local.NoteDao
 import com.example.todonotediary.data.remote.NoteRemoteDataSource
-import com.example.todonotediary.data.remote.TodoRemoteDataSource
 import com.example.todonotediary.domain.model.NoteEntity
 import com.example.todonotediary.domain.repository.NoteRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
+import javax.inject.Inject
 
-class NoteRepositoryImpl(private val noteDao: NoteDao, private val remoteDataSource: NoteRemoteDataSource) : NoteRepository {
+class NoteRepositoryImpl @Inject constructor(
+    private val remoteDataSource: NoteRemoteDataSource
+) : NoteRepository {
 
     override fun getNotes(userId: String): Flow<List<NoteEntity>> {
         return flow {
-            emit(noteDao.getNotes(userId))
-        }.catch { exception ->
+            emit(remoteDataSource.getNotes(userId))
+        }.catch {
             emit(emptyList())
         }
     }
 
+    override suspend fun getCategories(userId: String): List<String> {
+        return remoteDataSource.getCategories(userId)
+    }
+
+    override fun getNotesByCategory(userId: String, category: String): Flow<List<NoteEntity>> {
+        return flow {
+            emit(remoteDataSource.getNotesByCategory(userId, category))
+        }.catch {
+            emit(emptyList())
+        }
+    }
+
+    override fun searchByTitleOrContent(userId: String, search: String): Flow<List<NoteEntity>> {
+        return flow {
+            emit(remoteDataSource.searchByTitleOrContent(userId, search))
+        }.catch {
+            emit(emptyList())
+        }
+    }
+
+
     override suspend fun getNoteById(noteId: String): NoteEntity? {
-        return noteDao.getNoteById(noteId)
+        return remoteDataSource.getNoteById(noteId)
     }
 
     override suspend fun addNote(note: NoteEntity): Result<NoteEntity> {
-        return try {
-            noteDao.insertNote(note)
-            Result.success(note)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        return remoteDataSource.saveNote(note)
     }
 
     override suspend fun updateNote(note: NoteEntity): Result<Unit> {
         return try {
-            val updated = note.copy(updatedAt = System.currentTimeMillis())
-            noteDao.updateNote(updated)
-            Result.success(Unit)
+            val result = remoteDataSource.saveNote(note)
+            if (result.isSuccess) Result.success(Unit)
+            else Result.failure(result.exceptionOrNull() ?: Exception("Unknown error"))
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
     override suspend fun deleteNote(noteId: String): Result<Unit> {
-        return try {
-            val note = noteDao.getNoteById(noteId)
-                ?: return Result.failure(Exception("Note not found"))
-
-            val softDeleted = note.copy(updatedAt = System.currentTimeMillis(), isDeleted = true, lastSyncTimestamp = System.currentTimeMillis())
-            noteDao.updateNote(softDeleted)
-
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        return remoteDataSource.deleteNote(noteId)
     }
-
 
     override suspend fun syncNotes(userId: String, lastSyncTimestamp: Long): Result<Unit> {
-        return try {
-            // 1. Đẩy dữ liệu local chưa đồng bộ lên Firestore
-            val localNotesToSync = noteDao.getNotesToSync(userId)
-            for (note in localNotesToSync) {
-                val syncedNote = remoteDataSource.saveNote(note).getOrNull()
-                if (syncedNote != null) {
-                    noteDao.insertNote(syncedNote.copy(lastSyncTimestamp = System.currentTimeMillis()))
-                }
-            }
-
-            // 2. Lấy các bản ghi từ Firestore cập nhật về local
-            val remoteUpdates = remoteDataSource.getNotesUpdatedAfter(userId, lastSyncTimestamp)
-            for (remoteNote in remoteUpdates) {
-                noteDao.insertNote(remoteNote)
-            }
-
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        // Vì không còn local nữa, sync sẽ không thực hiện gì cả
+        return Result.success(Unit)
     }
-
 }

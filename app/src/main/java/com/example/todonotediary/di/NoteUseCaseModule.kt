@@ -27,7 +27,9 @@ object NoteUseCaseModule {
             updateNote = UpdateNoteUseCase(repository),
             deleteNote = DeleteNoteUseCase(repository),
             syncNotes = SyncNotesUseCase(repository),
-            getNotesByCategory = GetNotesByCategoryUseCase(getNotesUseCase)
+            getNotesByCategory = GetNotesByCategoryUseCase(repository),
+            searchNotesByTitleOrContentUseCase = SearchNotesByTitleOrContentUseCase(repository),
+            getCategoryUseCase = GetCategoryUseCase(repository)
         )
     }
 }
