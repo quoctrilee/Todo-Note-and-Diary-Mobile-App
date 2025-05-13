@@ -1,8 +1,10 @@
 package com.example.todonotediary.di
 
+import com.example.todonotediary.data.repository.DiaryRepositoryImpl
 import com.example.todonotediary.data.repository.NoteRepositoryImpl
 import com.example.todonotediary.domain.repository.TodoRepository
 import com.example.todonotediary.data.repository.TodoRepositoryImpl
+import com.example.todonotediary.domain.repository.DiaryRepository
 import com.example.todonotediary.domain.repository.NoteRepository
 import dagger.Binds
 import dagger.Module
@@ -24,4 +26,10 @@ abstract class RepositoryModule {
     abstract fun bindNoteRepository(
         impl: NoteRepositoryImpl
     ): NoteRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindDiaryRepository(
+        impl: DiaryRepositoryImpl
+    ): DiaryRepository
 }

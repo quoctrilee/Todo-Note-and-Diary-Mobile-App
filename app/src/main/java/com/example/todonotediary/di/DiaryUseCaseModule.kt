@@ -26,7 +26,9 @@ object DiaryUseCaseModule {
             addDiary = AddDiaryUseCase(repository),
             updateDiary = UpdateDiaryUseCase(repository),
             deleteDiary = DeleteDiaryUseCase(repository),
-            syncDiaries = SyncDiariesUseCase(repository)
+            syncDiaries = SyncDiariesUseCase(repository),
+            getDiariesByDateUseCase = GetDiariesByDateUseCase(repository),
+            getDiariesByTitleAndContentUseCase = GetDiariesByTitleAndContentUseCase(repository)
         )
     }
 }

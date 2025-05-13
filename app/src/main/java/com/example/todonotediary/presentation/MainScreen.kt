@@ -156,11 +156,10 @@ fun TopNavigationBar(navController: NavHostController, parentNavController: NavH
                                 // Điều hướng tới màn hình tạo Note mới
                                 parentNavController.navigate(Screen.AddNote.route)
                             }
-//
-//                            Screen.Diary.route -> {
-//                                // Điều hướng tới màn hình tạo Diary mới
-//                                parentNavController.navigate("create_diary")
-//                            }
+                            Screen.Diary.route -> {
+                                // Điều hướng tới màn hình tạo Diary mới
+                                parentNavController.navigate(Screen.AddDiary.route)
+                            }
                         }
                     },
                 shape = CircleShape,

@@ -5,6 +5,8 @@ import kotlinx.coroutines.flow.Flow
 
 interface DiaryRepository {
     fun getDiaries(userId: String): Flow<List<DiaryEntity>>
+    suspend fun getDiariesByDate(userId: String, date: Long): Flow<List<DiaryEntity>>
+    suspend fun  getDiariesByTitleOrContent(userId: String, text: String) : Flow<List<DiaryEntity>>
     suspend fun getDiaryById(diaryId: String): DiaryEntity?
     suspend fun addDiary(diary: DiaryEntity): Result<DiaryEntity>
     suspend fun  updateDiary(diary: DiaryEntity): Result<Unit>

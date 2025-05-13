@@ -9,6 +9,7 @@ import androidx.navigation.navArgument
 import com.example.todonotediary.presentation.MainScreenWithNavigation
 import com.example.todonotediary.presentation.auth.AuthScreen
 import com.example.todonotediary.presentation.auth.RegisterScreen
+import com.example.todonotediary.presentation.diary.AddDiaryScreen
 import com.example.todonotediary.presentation.note.AddNoteScreen
 import com.example.todonotediary.presentation.splash.SplashScreen
 import com.example.todonotediary.presentation.todo.AddTodoScreen
@@ -50,6 +51,10 @@ fun AppNavigation() {
 
         composable(Screen.AddNote.route) {
             AddNoteScreen(navController = navController, onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.AddDiary.route) {
+            AddDiaryScreen(navController = navController, onNavigateBack = { navController.popBackStack() })
         }
     }
 }

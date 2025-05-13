@@ -11,4 +11,5 @@ sealed class Screen(val route: String) {
     object MainScreen : Screen("main_screen")
     object AddTodo : Screen("addtodo_screen")
     object AddNote : Screen("addnote_screen")
+    object AddDiary: Screen("adddiary_screen")
 }

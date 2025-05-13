@@ -6,5 +6,7 @@ data class DiaryUseCases(
     val addDiary: AddDiaryUseCase,
     val updateDiary: UpdateDiaryUseCase,
     val deleteDiary: DeleteDiaryUseCase,
-    val syncDiaries: SyncDiariesUseCase
+    val syncDiaries: SyncDiariesUseCase,
+    val getDiariesByDateUseCase: GetDiariesByDateUseCase,
+    val getDiariesByTitleAndContentUseCase: GetDiariesByTitleAndContentUseCase
 )

@@ -11,6 +11,7 @@ class AddDiaryUseCase @Inject constructor(
     suspend operator fun invoke(
         date: Long,
         mood: String,
+        title: String,
         content: String,
         userId: String
     ): Result<DiaryEntity> {
@@ -18,6 +19,7 @@ class AddDiaryUseCase @Inject constructor(
             id = UUID.randomUUID().toString(),
             date = date,
             mood = mood,
+            title = title,
             content = content,
             userId = userId,
             lastSyncTimestamp = 0,
