@@ -61,7 +61,7 @@ fun RegisterScreen(
                 isLoading = false
                 Toast.makeText(context, "Đăng ký thành công", Toast.LENGTH_SHORT).show()
                 // Chuyển hướng đến màn hình chính
-                navController.navigate(Screen.Todo.route) {
+                navController.navigate(Screen.MainScreen.route) {
                     popUpTo(Screen.Auth.route) { inclusive = true }
                 }
                 viewModel.resetStates()

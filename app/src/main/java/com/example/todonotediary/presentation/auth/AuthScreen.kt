@@ -90,8 +90,8 @@ fun AuthScreen(
             }
             is GoogleSignInState.Success -> {
                 isLoading = false
-                // Người dùng đã tồn tại, chuyển hướng đến màn hình Todo
-                navController.navigate(Screen.Todo.route) {
+                // Người dùng đã tồn tại, chuyển hướng đến màn hình MainScreen thay vì Todo
+                navController.navigate(Screen.MainScreen.route) {
                     popUpTo(Screen.Auth.route) { inclusive = true }
                 }
                 viewModel.resetStates()
@@ -329,7 +329,7 @@ fun AuthScreen(
                             )
                         }
                         Text(
-                            text = "Đăng nhập bằng Google",
+                            text = "Sign in with Google",
                             fontSize = 16.sp
                         )
                     }
