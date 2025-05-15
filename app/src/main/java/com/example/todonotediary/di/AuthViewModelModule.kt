@@ -1,6 +1,8 @@
 package com.example.todonotediary.di
 
 import com.example.todonotediary.domain.usecase.auth.*
+import com.example.todonotediary.domain.usecase.user.GetUserDataUseCase
+import com.example.todonotediary.domain.usecase.user.UpdateUserAvatarUseCase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -18,14 +20,19 @@ object AuthViewModelModule {
         signInWithGoogleUseCase: SignInWithGoogleUseCase,
         saveUserToFirebaseUseCase: SaveUserToFirebaseUseCase,
         loginWithEmailUseCase: LoginWithEmailUseCase,
-        signOutUseCase: SignOutUseCase
+        signOutUseCase: SignOutUseCase,
+        getUserDataUseCase: GetUserDataUseCase,
+        updateUserAvatarUseCase: UpdateUserAvatarUseCase
     ): AuthUseCases {
         return AuthUseCases(
             getCurrentUser = getCurrentUserUseCase,
             signInWithGoogle = signInWithGoogleUseCase,
             saveUserToFirebaseUseCase = saveUserToFirebaseUseCase,
             loginWithEmail = loginWithEmailUseCase,
-            signOut = signOutUseCase
+            signOut = signOutUseCase,
+            getUserDataUseCase = getUserDataUseCase,
+            updateUserAvatarUseCase = updateUserAvatarUseCase
+
         )
     }
 }

@@ -34,6 +34,20 @@ import com.example.todonotediary.domain.model.TodoEntity
 import java.text.SimpleDateFormat
 import java.util.*
 
+// Light theme colors
+private val BackgroundColor = Color(0xFFF9FAFC)
+private val SurfaceColor = Color.White
+private val PrimaryColor = Color(0xFF5B8EFF)
+private val PrimaryVariantColor = Color(0xFF4A7AEC)
+private val SecondaryColor = Color(0xFFE8F0FF)
+private val TextPrimaryColor = Color(0xFF2C3E50)
+private val TextSecondaryColor = Color(0xFF718096)
+private val CompletedColor = Color(0xFF4CAF50)
+private val CompletedVariantColor = Color(0xFF3DA641)
+private val OverdueColor = Color(0xFFFF7675)
+private val OverdueVariantColor = Color(0xFFE56565)
+private val CardBorderWidth = 1.dp
+
 @Composable
 fun TodoScreen(
     onNavigateToAddTodo: () -> Unit = {},
@@ -46,7 +60,7 @@ fun TodoScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF121212))
+            .background(BackgroundColor)
     ) {
         Column(
             modifier = Modifier
@@ -110,7 +124,7 @@ fun TaskHeader(
     ) {
         Text(
             text = "My tasks",
-            color = Color.White,
+            color = TextPrimaryColor,
             fontSize = 30.sp,
             fontWeight = FontWeight.Bold
         )
@@ -142,7 +156,7 @@ fun FilterTab(
     ) {
         Text(
             text = text,
-            color = if (isSelected) Color.White else Color.Gray,
+            color = if (isSelected) PrimaryColor else TextSecondaryColor,
             fontSize = 18.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
             modifier = Modifier
@@ -157,7 +171,7 @@ fun FilterTab(
                 .width(64.dp)
                 .height(3.dp)
                 .background(
-                    if (isSelected) Color(0xFF3D7BF4) else Color.Transparent,
+                    if (isSelected) PrimaryColor else Color.Transparent,
                     RoundedCornerShape(1.5.dp)
                 )
         )
@@ -227,13 +241,13 @@ fun DayItem(
             modifier = Modifier
                 .size(45.dp)
                 .background(
-                    color = if (isSelected) Color(0xFF3D7BF4) else Color(0xFF2A2A2A),
+                    color = if (isSelected) PrimaryColor else SecondaryColor,
                     shape = CircleShape
                 )
         ) {
             Text(
                 text = dayNumber,
-                color = if (isSelected) Color.White else Color.Gray,
+                color = if (isSelected) Color.White else TextPrimaryColor,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -243,7 +257,7 @@ fun DayItem(
 
         Text(
             text = dayOfWeek,
-            color = if (isSelected) Color.White else Color.Gray,
+            color = if (isSelected) TextPrimaryColor else TextSecondaryColor,
             fontSize = 14.sp,
             fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
         )
@@ -264,7 +278,7 @@ fun TodoList(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            CircularProgressIndicator(color = Color(0xFF3D7BF4))
+            CircularProgressIndicator(color = PrimaryColor)
         }
     } else if (todos.isEmpty()) {
         Box(
@@ -273,7 +287,7 @@ fun TodoList(
         ) {
             Text(
                 text = "No tasks found",
-                color = Color.Gray,
+                color = TextSecondaryColor,
                 fontSize = 18.sp
             )
         }
@@ -324,10 +338,10 @@ fun TodoItem(
     } ?: true // Default to true if either start or end time is null
 
     // Set background color based on task status and tab
-    val (startColor, endColor) = when {
-        selectedTab == TodoTab.UPCOMING -> Pair(Color(0xFF2C5CD0), Color(0xFF3D7BF4)) // Blue for upcoming
-        todo.isCompleted -> Pair(Color(0xFF1F8B24), Color(0xFF27AC2D)) // Green for completed past tasks
-        else -> Pair(Color(0xFFBC2828), Color(0xFFD94343)) // Red for incomplete past tasks
+    val cardColor = when {
+        todo.isCompleted -> CompletedColor
+        selectedTab == TodoTab.LAST && !todo.isCompleted -> OverdueColor
+        else -> PrimaryColor
     }
 
     Card(
@@ -335,156 +349,154 @@ fun TodoItem(
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = when {
+                todo.isCompleted -> CompletedColor.copy(alpha = 0.15f)
+                selectedTab == TodoTab.LAST && !todo.isCompleted -> OverdueColor.copy(alpha = 0.15f)
+                else -> PrimaryColor.copy(alpha = 0.15f)
+            }
+        )
     ) {
-        Box(
+        Row(
             modifier = Modifier
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(startColor, endColor)
-                    )
-                )
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
+            // Checkbox with border
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .size(24.dp)
+                    .border(
+                        width = 2.dp,
+                        color = if (todo.isCompleted) CompletedColor else cardColor,
+                        shape = CircleShape
+                    )
+                    .clip(CircleShape)
+                    .clickable { onCompletionToggle() },
+                contentAlignment = Alignment.Center
             ) {
-                // Checkbox
-                Box(
-                    modifier = Modifier
-                        .size(24.dp)
-                        .background(Color.White.copy(alpha = 0.2f), CircleShape)
-                        .clip(CircleShape)
-                        .clickable { onCompletionToggle() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (todo.isCompleted) {
-                        Box(
-                            modifier = Modifier
-                                .size(16.dp)
-                                .background(Color.White, CircleShape)
-                        )
-                    }
+                if (todo.isCompleted) {
+                    Box(
+                        modifier = Modifier
+                            .size(16.dp)
+                            .background(CompletedColor, CircleShape)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            // Task content
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .alpha(if (todo.isCompleted) 0.7f else 1f)
+            ) {
+                Text(
+                    text = todo.title,
+                    color = TextPrimaryColor,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textDecoration = if (todo.isCompleted) TextDecoration.LineThrough else TextDecoration.None
+                )
+
+                if (todo.description.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = todo.description,
+                        color = TextSecondaryColor,
+                        fontSize = 14.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        textDecoration = if (todo.isCompleted) TextDecoration.LineThrough else TextDecoration.None
+                    )
                 }
 
-                Spacer(modifier = Modifier.width(16.dp))
+                // Time section with enhanced styling
+                Spacer(modifier = Modifier.height(8.dp))
 
-                // Task content
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .alpha(if (todo.isCompleted) 0.7f else 1f)
-                ) {
-                    Text(
-                        text = todo.title,
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                // Only display time section if at least one of startAt or deadline is not null
+                if (todo.startAt != null || todo.deadline != null) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Color.White.copy(alpha = 0.7f))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            // Display different formats based on whether it's same day or multiday
+                            if (isSameDay) {
+                                // Same day format: just show times
+                                todo.startAt?.let { startTime ->
+                                    Text(
+                                        text = timeFormatter.format(Date(startTime)),
+                                        color = cardColor,
+                                        fontSize = 14.sp
+                                    )
 
-                    if (todo.description.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = todo.description,
-                            color = Color.White.copy(alpha = 0.7f),
-                            fontSize = 14.sp,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            textDecoration = if (todo.isCompleted) TextDecoration.LineThrough else TextDecoration.None
-                        )
-                    }
-
-                    // Time section with enhanced styling
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Only display time section if at least one of startAt or deadline is not null
-                    if (todo.startAt != null || todo.deadline != null) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color.White.copy(alpha = 0.15f))
-                                .border(
-                                    width = 1.dp,
-                                    color = Color.White.copy(alpha = 0.2f),
-                                    shape = RoundedCornerShape(8.dp)
-                                )
-                                .padding(horizontal = 10.dp, vertical = 4.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                // Display different formats based on whether it's same day or multiday
-                                if (isSameDay) {
-                                    // Same day format: just show times
-                                    todo.startAt?.let { startTime ->
+                                    if (todo.deadline != null) {
                                         Text(
-                                            text = timeFormatter.format(Date(startTime)),
-                                            color = Color.White.copy(alpha = 0.9f),
+                                            text = " - ",
+                                            color = cardColor.copy(alpha = 0.7f),
                                             fontSize = 14.sp
                                         )
-
-                                        if (todo.deadline != null) {
-                                            Text(
-                                                text = " - ",
-                                                color = Color.White.copy(alpha = 0.7f),
-                                                fontSize = 14.sp
-                                            )
-                                        }
                                     }
+                                }
 
-                                    todo.deadline?.let { endTime ->
+                                todo.deadline?.let { endTime ->
+                                    Text(
+                                        text = timeFormatter.format(Date(endTime)),
+                                        color = cardColor,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            } else {
+                                // Different days format: show dates and times
+                                todo.startAt?.let { startTime ->
+                                    Text(
+                                        text = dateFormatter.format(Date(startTime)) + " " + timeFormatter.format(Date(startTime)),
+                                        color = cardColor,
+                                        fontSize = 14.sp
+                                    )
+
+                                    if (todo.deadline != null) {
                                         Text(
-                                            text = timeFormatter.format(Date(endTime)),
-                                            color = Color.White.copy(alpha = 0.9f),
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                    }
-                                } else {
-                                    // Different days format: show dates and times
-                                    todo.startAt?.let { startTime ->
-                                        Text(
-                                            text = dateFormatter.format(Date(startTime)) + " " + timeFormatter.format(Date(startTime)),
-                                            color = Color.White.copy(alpha = 0.9f),
+                                            text = " - ",
+                                            color = cardColor.copy(alpha = 0.7f),
                                             fontSize = 14.sp
                                         )
-
-                                        if (todo.deadline != null) {
-                                            Text(
-                                                text = " - ",
-                                                color = Color.White.copy(alpha = 0.7f),
-                                                fontSize = 14.sp
-                                            )
-                                        }
                                     }
+                                }
 
-                                    todo.deadline?.let { endTime ->
-                                        Text(
-                                            text = dateFormatter.format(Date(endTime)) + " " + timeFormatter.format(Date(endTime)),
-                                            color = Color.White.copy(alpha = 0.9f),
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                    }
+                                todo.deadline?.let { endTime ->
+                                    Text(
+                                        text = dateFormatter.format(Date(endTime)) + " " + timeFormatter.format(Date(endTime)),
+                                        color = cardColor,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
                                 }
                             }
                         }
                     }
                 }
+            }
 
-                // Delete button
-                IconButton(
-                    onClick = onDelete,
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete task",
-                        tint = Color.White.copy(alpha = 0.7f)
-                    )
-                }
+            // Delete button
+            IconButton(
+                onClick = onDelete,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete task",
+                    tint = TextSecondaryColor
+                )
             }
         }
     }

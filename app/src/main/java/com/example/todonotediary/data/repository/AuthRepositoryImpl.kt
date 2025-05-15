@@ -35,6 +35,30 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun signOut() {
         firebaseAuth.signOut()
     }
+    override suspend fun updateUserAvatar(userId: String, avatarName: String): Result<Unit> {
+        return try {
+            firestore.collection("users").document(userId)
+                .update("avatar_url", avatarName)
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getUserData(userId: String): Result<Map<String, Any>> {
+        return try {
+            val document = firestore.collection("users").document(userId).get().await()
+            if (document.exists()) {
+                Result.success(document.data ?: emptyMap())
+            } else {
+                Result.failure(Exception("User data not found"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
 
     override suspend fun saveUserToFirebase(email: String, password: String, displayName: String): Result<FirebaseUser> {
         return try {
@@ -48,6 +72,7 @@ class AuthRepositoryImpl @Inject constructor(
             val userData = hashMapOf(
                 "email" to email,
                 "displayName" to displayName,
+                "avatar_url" to "R.drawable.avt_default",
                 "createdAt" to System.currentTimeMillis()
             )
 

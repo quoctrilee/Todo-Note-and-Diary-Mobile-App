@@ -2,6 +2,8 @@ package com.example.todonotediary.di
 
 import com.example.todonotediary.domain.repository.AuthRepository
 import com.example.todonotediary.domain.usecase.auth.*
+import com.example.todonotediary.domain.usecase.user.GetUserDataUseCase
+import com.example.todonotediary.domain.usecase.user.UpdateUserAvatarUseCase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -40,5 +42,16 @@ object AuthUseCaseModule {
     @Singleton
     fun provideSaveUserToFirebaseUseCase(authRepository: AuthRepository): SaveUserToFirebaseUseCase {
         return SaveUserToFirebaseUseCase(authRepository)
+    }
+    @Provides
+    @Singleton
+    fun provideGetUserDataUseCase(authRepository: AuthRepository): GetUserDataUseCase {
+        return GetUserDataUseCase(authRepository)
+    }
+
+    @Provides
+    @Singleton
+    fun provideUpdateUserAvatarUseCase(authRepository: AuthRepository): UpdateUserAvatarUseCase {
+        return UpdateUserAvatarUseCase(authRepository)
     }
 }

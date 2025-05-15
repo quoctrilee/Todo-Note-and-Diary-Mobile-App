@@ -48,6 +48,7 @@ android {
 }
 
 dependencies {
+    implementation("io.coil-kt:coil-compose:2.2.2")
     implementation("com.jakewharton.timber:timber:5.0.1")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

@@ -27,6 +27,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,28 +35,47 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import coil.compose.rememberAsyncImagePainter
 import com.example.todonotediary.R
 import com.example.todonotediary.presentation.diary.DiaryScreen
 import com.example.todonotediary.presentation.navigation.Screen
 import com.example.todonotediary.presentation.note.NoteScreen
 import com.example.todonotediary.presentation.todo.TodoScreen
+import com.example.todonotediary.presentation.user.UserScreen
+import com.google.firebase.auth.FirebaseUser
 
 @Composable
-fun MainScreen(parentNavController: NavHostController) {
-    // NavController cho điều hướng bên trong MainScreen
+fun MainScreen(
+    parentNavController: NavHostController,
+    viewModel: MainViewModel = hiltViewModel()
+) {
     val innerNavController = rememberNavController()
+    val user by viewModel.user.collectAsState()
+    val displayName by viewModel.displayName.collectAsState()
+    val avatarUrl by viewModel.avatarUrl.collectAsState()
+
 
     Scaffold(
-        topBar = { TopNavigationBar(navController = innerNavController, parentNavController = parentNavController) },
+        topBar = {
+            TopNavigationBar(
+                avatarUrl = avatarUrl,
+                displayName = displayName,
+                navController = innerNavController,
+                parentNavController = parentNavController
+            )
+
+        },
         bottomBar = { BottomNavigationBar(navController = innerNavController) }
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
@@ -71,8 +91,22 @@ fun MainScreen(parentNavController: NavHostController) {
     }
 }
 
+
+
 @Composable
-fun TopNavigationBar(navController: NavHostController, parentNavController: NavHostController) {
+fun TopNavigationBar( avatarUrl: String?,
+                      displayName: String?,
+                      navController: NavHostController,
+                      parentNavController: NavHostController) {
+    val context = LocalContext.current
+    val avatarResName = avatarUrl?.substringAfterLast('.') ?: "avt_default"
+    val avatarResId = context.resources.getIdentifier(
+        avatarResName,
+        "drawable",
+        context.packageName
+    )
+    val avatarPainter = painterResource(id = if (avatarResId != 0) avatarResId else R.drawable.avt_default)
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -83,32 +117,44 @@ fun TopNavigationBar(navController: NavHostController, parentNavController: NavH
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Avatar người dùng ở góc trái
             Surface(
                 modifier = Modifier
-                    .size(46.dp),
+                    .size(46.dp)
+                    .clickable {
+                        parentNavController.navigate(Screen.User.route) {
+                            popUpTo(parentNavController.graph.startDestinationId)
+                            launchSingleTop = true
+                        }
+                    },
                 shape = CircleShape,
                 color = Color.White
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.img),
+                    painter = avatarPainter,
                     contentDescription = "User Avatar",
                     modifier = Modifier
                         .size(46.dp)
-                        .clip(CircleShape),
+                        .clip(CircleShape)
+                        .clickable {
+                            parentNavController.navigate(Screen.User.route) {
+                                popUpTo(parentNavController.graph.startDestinationId)
+                                launchSingleTop = true
+                            }
+                        },
                     contentScale = ContentScale.Crop
                 )
             }
 
             Spacer(modifier = Modifier.width(12.dp))
+
             Column {
                 Text(
-                    text = "Hi, Welcome Back!",
+                    text = "Hi, have good day!",
                     fontSize = 14.sp,
                     color = Color.Gray
                 )
                 Text(
-                    text = "Amirnov",
+                    text = displayName ?: "User",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.Black

@@ -13,6 +13,7 @@ import com.example.todonotediary.presentation.diary.AddDiaryScreen
 import com.example.todonotediary.presentation.note.AddNoteScreen
 import com.example.todonotediary.presentation.splash.SplashScreen
 import com.example.todonotediary.presentation.todo.AddTodoScreen
+import com.example.todonotediary.presentation.user.UserScreen
 
 @Composable
 fun AppNavigation() {
@@ -56,5 +57,10 @@ fun AppNavigation() {
         composable(Screen.AddDiary.route) {
             AddDiaryScreen(navController = navController, onNavigateBack = { navController.popBackStack() })
         }
+
+        composable(Screen.User.route) {
+            UserScreen(navController = navController)
+        }
+
     }
 }
