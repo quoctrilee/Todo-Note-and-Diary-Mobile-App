@@ -48,6 +48,8 @@ android {
 }
 
 dependencies {
+    implementation ("androidx.work:work-runtime-ktx:2.9.0")
+    implementation ("androidx.hilt:hilt-work:1.2.0")
     implementation("io.coil-kt:coil-compose:2.2.2")
     implementation("com.jakewharton.timber:timber:5.0.1")
     implementation(libs.androidx.core.ktx)

@@ -59,6 +59,7 @@ fun DiaryScreen(
     }
 
     Scaffold(
+        containerColor = Color.White,
         topBar = {
             DiaryHeader(
                 hasDateFilter = uiState.selectedDate != null,
@@ -156,7 +157,8 @@ fun DiaryHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(16.dp)
+            .background(Color.White),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -304,10 +306,12 @@ fun DateItem(
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected)
-                MaterialTheme.colorScheme.primary
+                Color(0xFF2196F3) // màu xanh lam (Blue 500)
             else
                 MaterialTheme.colorScheme.surfaceVariant
         )
+
+
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,

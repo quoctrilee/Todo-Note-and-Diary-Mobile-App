@@ -49,25 +49,36 @@ fun NoteScreen(
     val selectedCategory by viewModel.selectedCategory.collectAsState()
 
     Scaffold(
+        containerColor = Color.White,
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "My Notes",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 30.sp
+            Surface(
+                color = Color.White
+            ) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "My Notes",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 30.sp,
+                            color = Color.Black
+                        )
+                    },
+                    modifier = Modifier
+                        .offset(y = (-16).dp)
+                        .background(Color.White),
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.White
                     )
-                },
-                modifier = Modifier.offset(y = (-16).dp) // Đẩy TopAppBar lên trên 12.dp
-            )
+                )
+            }
         },
-    )
-    { paddingValues ->
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp)
+                .background(Color.White)
         ) {
             // Thanh tìm kiếm
             CustomSearchBar(
@@ -80,9 +91,9 @@ fun NoteScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
             val categories by viewModel.categories.collectAsState()
+
             // Danh mục
             CategoriesRow(
-
                 categories = categories,
                 selectedCategory = selectedCategory,
                 onCategorySelected = { viewModel.onEvent(NotesEvent.CategorySelected(it)) }
@@ -117,8 +128,8 @@ fun CustomSearchBar(
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
-        tonalElevation = 2.dp
+        color = Color(0xFFF5F5F5), // Màu nền trắng xám nhẹ cho thanh tìm kiếm
+        tonalElevation = 0.dp
     ) {
         Row(
             modifier = Modifier
@@ -130,7 +141,7 @@ fun CustomSearchBar(
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = "Biểu tượng tìm kiếm",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = Color.Gray
             )
 
             Spacer(modifier = Modifier.width(8.dp))
@@ -143,7 +154,7 @@ fun CustomSearchBar(
                     .fillMaxHeight()
                     .padding(vertical = 16.dp),
                 textStyle = MaterialTheme.typography.bodyLarge.copy(
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = Color.Black
                 ),
                 decorationBox = { innerTextField ->
                     Box {
@@ -151,7 +162,7 @@ fun CustomSearchBar(
                             Text(
                                 text = "Tìm kiếm ghi chú",
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = Color.Gray
                             )
                         }
                         innerTextField()
@@ -164,7 +175,7 @@ fun CustomSearchBar(
                     Icon(
                         imageVector = Icons.Default.Clear,
                         contentDescription = "Xóa tìm kiếm",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = Color.Gray
                     )
                 }
             }
@@ -202,15 +213,14 @@ fun CategoryChip(
 ) {
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = if (isSelected) MaterialTheme.colorScheme.primary
-        else MaterialTheme.colorScheme.surfaceVariant,
+        color = if (isSelected) Color(0xFF2196F3)
+        else Color(0xFFF0F0F0), // Màu nền trắng xám nhẹ cho thẻ danh mục không được chọn
         modifier = Modifier.clickable(onClick = onClick)
     ) {
         Text(
             text = category,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            color = if (isSelected) MaterialTheme.colorScheme.onPrimary
-            else MaterialTheme.colorScheme.onSurfaceVariant,
+            color = if (isSelected) Color.White else Color.Black,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
         )
     }
@@ -246,11 +256,12 @@ fun NoteCard(
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
 
-    val backgroundColor = parseColor(
-        note.background_color,
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
-    )
-
+    // Sử dụng màu nền trắng hoặc màu được chỉ định
+    val backgroundColor = if (note.background_color.isEmpty()) {
+        Color.White
+    } else {
+        parseColor(note.background_color, Color.White)
+    }
 
     Card(
         modifier = Modifier
@@ -261,7 +272,7 @@ fun NoteCard(
             containerColor = backgroundColor
         ),
         shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Column(
@@ -277,8 +288,7 @@ fun NoteCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.fillMaxWidth(),
-                    // Điều chỉnh màu chữ dựa trên màu nền để đảm bảo độ tương phản
-                    color = getTextColorForBackground(backgroundColor)
+                    color = Color.Black
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -292,8 +302,7 @@ fun NoteCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
-                    // Điều chỉnh màu chữ dựa trên màu nền để đảm bảo độ tương phản
-                    color = getTextColorForBackground(backgroundColor)
+                    color = Color.DarkGray
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -302,8 +311,7 @@ fun NoteCard(
                 Text(
                     text = formatDate(note.createdAt),
                     fontSize = 12.sp,
-                    // Điều chỉnh màu chữ dựa trên màu nền để đảm bảo độ tương phản
-                    color = getTextColorForBackground(backgroundColor).copy(alpha = 0.7f)
+                    color = Color.Gray
                 )
             }
 
@@ -323,7 +331,7 @@ fun NoteCard(
                     Icon(
                         imageVector = Icons.Default.MoreVert,
                         contentDescription = "Tùy chọn",
-                        tint = getTextColorForBackground(backgroundColor),
+                        tint = Color.Gray,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -386,13 +394,13 @@ fun EmptyNotesMessage() {
             Text(
                 text = "Không tìm thấy ghi chú nào",
                 style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = Color.Gray
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Thêm ghi chú mới để bắt đầu",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = Color.Gray
             )
         }
     }
@@ -414,19 +422,5 @@ private fun parseColor(colorString: String, defaultColor: Color): Color {
         Color(android.graphics.Color.parseColor(colorString))
     } catch (e: Exception) {
         defaultColor
-    }
-}
-
-
-// Hàm tính toán màu văn bản phù hợp dựa trên màu nền
-private fun getTextColorForBackground(backgroundColor: Color): Color {
-    // Tính toán độ sáng của màu nền (công thức YIQ)
-    val brightness = (backgroundColor.red * 299 + backgroundColor.green * 587 + backgroundColor.blue * 114) / 1000
-
-    // Nếu màu nền sáng, sử dụng chữ tối và ngược lại
-    return if (brightness > 0.5f) {
-        Color.Black
-    } else {
-        Color.White
     }
 }

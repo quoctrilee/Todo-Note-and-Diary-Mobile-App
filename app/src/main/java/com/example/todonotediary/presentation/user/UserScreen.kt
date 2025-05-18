@@ -55,15 +55,21 @@ fun UserScreen(
     }
 
     Scaffold(
+        containerColor = Color.White,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("User Profile") },
+                title = { Text("User Profile", color = Color.Black) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.Black)
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White,
+                    titleContentColor = Color.Black,
+                    navigationIconContentColor = Color.Black
+                )
             )
         }
     ) { paddingValues ->
@@ -90,7 +96,7 @@ fun UserScreen(
                         onAvatarClick = { showAvatarDialog = true }
                     )
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(24.dp).background(Color.White))
 
                     // Options
                     UserOptions(
