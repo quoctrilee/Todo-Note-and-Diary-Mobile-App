@@ -35,11 +35,11 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 // Light theme colors
-private val BackgroundColor = Color(0xFFF9FAFC)
+private val BackgroundColor = Color(0xFFFFFFFF)
 private val SurfaceColor = Color.White
 private val PrimaryColor = Color(0xFF5B8EFF)
 private val PrimaryVariantColor = Color(0xFF4A7AEC)
-private val SecondaryColor = Color(0xFFE8F0FF)
+private val SecondaryColor = Color(0xFFFFFFFF)
 private val TextPrimaryColor = Color(0xFF2C3E50)
 private val TextSecondaryColor = Color(0xFF718096)
 private val CompletedColor = Color(0xFF4CAF50)

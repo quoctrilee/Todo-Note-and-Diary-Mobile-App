@@ -28,6 +28,7 @@ class DiaryRemoteDataSource @Inject constructor(
                 .mapNotNull { doc ->
                     doc.toObject(DiaryEntity::class.java)?.copy(id = doc.id)
                 }
+                .sortedByDescending { it.date }
         } catch (e: Exception) {
             emptyList()
         }

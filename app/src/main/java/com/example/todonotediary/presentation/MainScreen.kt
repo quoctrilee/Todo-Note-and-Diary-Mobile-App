@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.rounded.Notifications
@@ -67,6 +68,7 @@ fun MainScreen(
 
 
     Scaffold(
+        containerColor = Color.White,
         topBar = {
             TopNavigationBar(
                 avatarUrl = avatarUrl,
@@ -78,7 +80,7 @@ fun MainScreen(
         },
         bottomBar = { BottomNavigationBar(navController = innerNavController) }
     ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
+        Box(modifier = Modifier.padding(innerPadding) .background(Color.White) ) {
             NavHost(
                 navController = innerNavController,
                 startDestination = Screen.Todo.route
@@ -111,7 +113,7 @@ fun TopNavigationBar( avatarUrl: String?,
         modifier = Modifier
             .fillMaxWidth()
             .padding(14.dp, 30.dp),
-        color = Color.Transparent
+        color = Color.White
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -232,20 +234,20 @@ fun BottomNavigationBar(navController: NavHostController) {
     val items = listOf(
         NavigationItem("Todo", Icons.Default.DateRange, Screen.Todo.route),
         NavigationItem("Notes", Icons.Default.Create, Screen.Note.route),
-        NavigationItem("Diary", Icons.Default.DateRange, Screen.Diary.route)
+        NavigationItem("Diary", Icons.Default.Book, Screen.Diary.route)
     )
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 14.dp, vertical = 14.dp),
+            .padding(start = 14.dp, end = 14.dp, top = 4.dp, bottom = 10.dp),
         shape = RoundedCornerShape(24.dp),
         color = Color.White,
         shadowElevation = 8.dp
     ) {
         Row(
             modifier = Modifier
-                .height(68.dp)
+                .height(72.dp)
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
