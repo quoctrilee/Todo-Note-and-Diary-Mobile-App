@@ -59,7 +59,7 @@ fun AuthScreen(
     // Cấu hình Google Sign-In
     val gso = remember {
         GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken("712471685484-jadone5ck2fqss4s7k9qeisvin4s2mi8.apps.googleusercontent.com") // Thay bằng Client ID thực của bạn
+            .requestIdToken("") // Thay bằng Client ID thực của bạn
             .requestEmail()
             .build()
     }
