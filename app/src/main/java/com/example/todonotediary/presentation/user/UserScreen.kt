@@ -29,6 +29,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.todonotediary.R
+import com.example.todonotediary.presentation.MainViewModel
 import com.example.todonotediary.presentation.navigation.Screen
 import kotlinx.coroutines.launch
 
@@ -36,7 +37,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun UserScreen(
     navController: NavHostController,
-    viewModel: UserViewModel = hiltViewModel()
+    viewModel: UserViewModel = hiltViewModel(),
+    mainViewModel: MainViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
@@ -61,7 +63,11 @@ fun UserScreen(
             TopAppBar(
                 title = { Text("User Profile", color = Color.Black) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = {
+                        // Refresh main view model data before going back
+                        mainViewModel.refreshUserData()
+                        navController.popBackStack()
+                    }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.Black)
                     }
                 },
@@ -103,7 +109,7 @@ fun UserScreen(
                         onLogoutClick = {
                             viewModel.signOut()
                             navController.navigate(Screen.Auth.route) {
-                                popUpTo("user") { inclusive = true }
+                                popUpTo("main") { inclusive = true }
                             }
                         }
                     )

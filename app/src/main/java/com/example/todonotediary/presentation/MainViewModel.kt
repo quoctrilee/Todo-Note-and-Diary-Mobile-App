@@ -34,38 +34,37 @@ class MainViewModel @Inject constructor(
     val error: StateFlow<String?> = _error
 
     init {
-        loadCurrentUser()
+        getCurrentUser()
     }
 
-    private fun loadCurrentUser() {
+    fun getCurrentUser() {
         viewModelScope.launch {
-            _user.value = authUseCases.getCurrentUser()
-            _user.value?.uid?.let { userId ->
-                fetchUserData(userId)
+            val currentUser = authUseCases.getCurrentUser()
+            _user.value = currentUser
+            if (currentUser != null) {
+                fetchUserData(currentUser.uid)
             }
         }
     }
 
     private fun fetchUserData(userId: String) {
         viewModelScope.launch {
-            _isLoading.value = true
-            authUseCases.getUserDataUseCase(userId)
-                .onSuccess { data ->
-                    _userData.value = data
-                    _displayName.value = data["displayName"] as? String
-                    _avatarUrl.value = data["avatar_url"] as? String
-                    _error.value = null
+            authUseCases.getUserDataUseCase(userId).fold(
+                onSuccess = { userData ->
+                    _displayName.value = userData["displayName"] as? String
+                    _avatarUrl.value = userData["avatar_url"] as? String ?: "R.drawable.avt_default"
+                },
+                onFailure = { error ->
+                    // Handle error silently here or add error state if needed
                 }
-                .onFailure { exception ->
-                    _error.value = exception.message ?: "Failed to load user data"
-                }
-            _isLoading.value = false
+            )
         }
     }
 
+    // Add this function to refresh user data when returning from UserScreen
     fun refreshUserData() {
-        _user.value?.uid?.let { userId ->
-            fetchUserData(userId)
+        _user.value?.let { user ->
+            fetchUserData(user.uid)
         }
     }
 }

@@ -78,7 +78,7 @@ fun AuthScreen(
                 viewModel.signInWithGoogle(token)
             }
         } catch (e: Exception) {
-            Toast.makeText(context, "Đăng nhập Google thất bại: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Login failed: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -90,7 +90,6 @@ fun AuthScreen(
             }
             is GoogleSignInState.Success -> {
                 isLoading = false
-                // Người dùng đã tồn tại, chuyển hướng đến màn hình MainScreen thay vì Todo
                 navController.navigate(Screen.MainScreen.route) {
                     popUpTo(Screen.Auth.route) { inclusive = true }
                 }
@@ -246,7 +245,7 @@ fun AuthScreen(
                     modifier = Modifier.align(Alignment.End)
                 ) {
                     Text(
-                        text = "Quên mật khẩu?",
+                        text = "Forget Password?",
                         color = accentColor,
                         fontSize = 14.sp
                     )
@@ -264,7 +263,7 @@ fun AuthScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = buttonColor)
                 ) {
                     Text(
-                        text = "Đăng nhập",
+                        text = "Login",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -284,7 +283,7 @@ fun AuthScreen(
                         color = Color.LightGray
                     )
                     Text(
-                        text = "hoặc",
+                        text = "Or",
                         color = Color.Gray,
                         fontSize = 14.sp
                     )

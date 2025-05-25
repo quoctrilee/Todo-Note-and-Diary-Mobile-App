@@ -28,6 +28,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -66,6 +67,9 @@ fun MainScreen(
     val displayName by viewModel.displayName.collectAsState()
     val avatarUrl by viewModel.avatarUrl.collectAsState()
 
+    LaunchedEffect(Unit) {
+        viewModel.refreshUserData()
+    }
 
     Scaffold(
         containerColor = Color.White,
@@ -165,26 +169,6 @@ fun TopNavigationBar( avatarUrl: String?,
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Nút thông báo với thiết kế hiện đại hơn
-            Surface(
-                modifier = Modifier
-                    .size(46.dp)
-                    .shadow(2.dp, CircleShape),
-                shape = CircleShape,
-                color = Color(0xFFF0F0F5)
-            ) {
-                Box(
-                    modifier = Modifier.size(46.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Notifications,
-                        contentDescription = "Notifications",
-                        tint = Color.DarkGray,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
 
             Spacer(modifier = Modifier.width(12.dp))
             val navBackStackEntry by navController.currentBackStackEntryAsState()

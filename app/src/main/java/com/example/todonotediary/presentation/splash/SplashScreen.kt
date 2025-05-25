@@ -26,13 +26,11 @@ fun SplashScreen(navController: NavController) {
                     text = "TodoNoteDiary",
                     fontSize = 24.sp // Sử dụng sp cho fontSize thay vì dp
                 )
-
-
-        LaunchedEffect(key1 = true) {
-            delay(2000) // 2 seconds delay
-            navController.navigate(Screen.Auth.route) {
-                popUpTo(Screen.Splash.route) { inclusive = true }
+            LaunchedEffect(key1 = true) {
+                delay(2000) // 2 seconds delay
+                navController.navigate(Screen.Auth.route) {
+                    popUpTo(Screen.Splash.route) { inclusive = true }
+                }
             }
-        }
     }
 }
