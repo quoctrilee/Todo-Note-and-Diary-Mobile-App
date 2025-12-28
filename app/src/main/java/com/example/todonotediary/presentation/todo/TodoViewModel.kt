@@ -7,11 +7,15 @@ import com.example.todonotediary.domain.model.TodoEntity
 import com.example.todonotediary.domain.usecase.auth.AuthUseCases
 import com.example.todonotediary.domain.usecase.todo.TodoUseCases
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -27,12 +31,10 @@ class TodoViewModel @Inject constructor(
     private val _todoState = MutableStateFlow(TodoState())
     val todoState: StateFlow<TodoState> = _todoState.asStateFlow()
 
-    fun getCurrentUserId(): String? {
+    private fun getCurrentUserId(): String? {
         val currentUser = authUseCases.getCurrentUser()
         return currentUser?.uid
     }
-    // User Id (in reality, would be fetched from AuthRepository)
-    private val userId: String = getCurrentUserId()!!
 
     // Default value is the current date
     private val calendar = Calendar.getInstance()
@@ -54,42 +56,63 @@ class TodoViewModel @Inject constructor(
      * Switch between Upcoming and Past tabs
      */
     fun switchTab(tab: TodoTab) {
-        viewModelScope.launch {
-            _todoState.value = _todoState.value.copy(
-                selectedTab = tab,
-                isLoading = true
-            )
+        viewModelScope.launch(Dispatchers.IO) {
+            val currentUserId = getCurrentUserId()
+            if (currentUserId == null) {
+                withContext(Dispatchers.Main) {
+                    _todoState.value = _todoState.value.copy(
+                        isLoading = false,
+                        error = "Bạn cần đăng nhập để xem công việc"
+                    )
+                }
+                return@launch
+            }
+
+            withContext(Dispatchers.Main) {
+                _todoState.value = _todoState.value.copy(
+                    selectedTab = tab,
+                    isLoading = true
+                )
+            }
 
             val selectedDate = _todoState.value.selectedDate
 
             when (tab) {
                 TodoTab.UPCOMING -> {
-                    todoUseCases.getTodoUpcoming(userId, selectedDate).collectLatest { todos ->
-                        // Sort todos: first by start time, then by deadline
-                        val sortedTodos = todos.sortedWith(compareBy(
-                            { it.startAt ?: Long.MAX_VALUE },  // Sort by start time first
-                            { it.deadline ?: Long.MAX_VALUE }  // Then by deadline
-                        ))
+                    todoUseCases.getTodoUpcoming(currentUserId, selectedDate)
+                        .distinctUntilChanged() // Prevent duplicate emissions
+                        .collect { todos ->
+                            // Sort todos: first by start time, then by deadline
+                            val sortedTodos = todos.sortedWith(compareBy(
+                                { it.startAt ?: Long.MAX_VALUE },  // Sort by start time first
+                                { it.deadline ?: Long.MAX_VALUE }  // Then by deadline
+                            ))
 
-                        _todoState.value = _todoState.value.copy(
-                            todoList = sortedTodos,
-                            isLoading = false
-                        )
-                    }
+                            withContext(Dispatchers.Main) {
+                                _todoState.value = _todoState.value.copy(
+                                    todoList = sortedTodos,
+                                    isLoading = false
+                                )
+                            }
+                        }
                 }
                 TodoTab.LAST -> {
-                    todoUseCases.getTodoPast(userId, selectedDate).collectLatest { todos ->
-                        // For past tasks, show completed items first, then sort by deadline
-                        val sortedTodos = todos.sortedWith(
-                            compareByDescending<TodoEntity> { it.isCompleted }
-                                .thenBy { it.deadline ?: Long.MAX_VALUE }
-                        )
+                    todoUseCases.getTodoPast(currentUserId, selectedDate)
+                        .distinctUntilChanged() // Prevent duplicate emissions
+                        .collect { todos ->
+                            // For past tasks, show completed items first, then sort by deadline
+                            val sortedTodos = todos.sortedWith(
+                                compareByDescending<TodoEntity> { it.isCompleted }
+                                    .thenBy { it.deadline ?: Long.MAX_VALUE }
+                            )
 
-                        _todoState.value = _todoState.value.copy(
-                            todoList = sortedTodos,
-                            isLoading = false
-                        )
-                    }
+                            withContext(Dispatchers.Main) {
+                                _todoState.value = _todoState.value.copy(
+                                    todoList = sortedTodos,
+                                    isLoading = false
+                                )
+                            }
+                        }
                 }
             }
         }
@@ -117,12 +140,24 @@ class TodoViewModel @Inject constructor(
      * Update the completion status of a task
      */
     fun toggleTodoCompletion(todoId: String) {
-        viewModelScope.launch {
-            val result = todoUseCases.toggleTodoCompletion(todoId)
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val result = todoUseCases.toggleTodoCompletion(todoId)
 
-            // If update successful, reload task list
-            if (result.isSuccess) {
-                refreshTodoList()
+                if (result.isFailure) {
+                    withContext(Dispatchers.Main) {
+                        _todoState.value = _todoState.value.copy(
+                            error = "Không thể cập nhật trạng thái công việc"
+                        )
+                    }
+                }
+                // Flow auto-updates, no need to refresh
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    _todoState.value = _todoState.value.copy(
+                        error = "Lỗi: ${e.message}"
+                    )
+                }
             }
         }
     }
@@ -131,12 +166,24 @@ class TodoViewModel @Inject constructor(
      * Delete a task
      */
     fun deleteTodo(todoId: String) {
-        viewModelScope.launch {
-            val result = todoUseCases.deleteTodo(todoId)
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val result = todoUseCases.deleteTodo(todoId)
 
-            // If deletion successful, reload task list
-            if (result.isSuccess) {
-                refreshTodoList()
+                if (result.isFailure) {
+                    withContext(Dispatchers.Main) {
+                        _todoState.value = _todoState.value.copy(
+                            error = "Không thể xóa công việc"
+                        )
+                    }
+                }
+                // Flow auto-updates, no need to refresh
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    _todoState.value = _todoState.value.copy(
+                        error = "Lỗi: ${e.message}"
+                    )
+                }
             }
         }
     }
@@ -149,6 +196,20 @@ class TodoViewModel @Inject constructor(
             TodoTab.UPCOMING -> switchTab(TodoTab.UPCOMING)
             TodoTab.LAST -> switchTab(TodoTab.LAST)
         }
+    }
+
+    /**
+     * Refresh current tab - used for auto-refresh on screen resume
+     */
+    fun refreshCurrentTab() {
+        refreshTodoList()
+    }
+
+    /**
+     * Clear error message
+     */
+    fun clearError() {
+        _todoState.value = _todoState.value.copy(error = null)
     }
 
     /**
@@ -224,7 +285,8 @@ data class TodoState(
     val selectedDayOfWeek: String = "",
     val selectedDayNumber: String = "",
     val selectedDate: Long = 0L,
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val error: String? = null
 )
 
 /**

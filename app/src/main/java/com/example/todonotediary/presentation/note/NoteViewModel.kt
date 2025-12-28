@@ -8,6 +8,7 @@ import com.example.todonotediary.domain.model.NoteEntity
 import com.example.todonotediary.domain.usecase.auth.AuthUseCases
 import com.example.todonotediary.domain.usecase.note.NoteUseCases
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
@@ -191,25 +193,18 @@ class NoteViewModel @Inject constructor(
 
     // Xóa ghi chú (thực tế là đánh dấu đã xóa)
     private fun deleteNote(noteId: String) {
-        viewModelScope.launch {
-            _state.value = state.value.copy(isLoading = true)
-
+        viewModelScope.launch(Dispatchers.IO) {
             val result = noteUseCases.deleteNote(noteId)
 
-            if (result.isSuccess) {
-                // Làm mới danh sách ghi chú sau khi xóa
-                if (_selectedCategory.value == "all") {
-                    getNotes()
-                } else {
-                    getNotesByCategory(_selectedCategory.value)
+            if (result.isFailure) {
+                withContext(Dispatchers.Main) {
+                    _state.value = state.value.copy(
+                        error = "Không thể xóa ghi chú",
+                        isLoading = false
+                    )
                 }
-            } else {
-                // Xử lý lỗi nếu cần
-                _state.value = state.value.copy(
-                    error = "Không thể xóa ghi chú",
-                    isLoading = false
-                )
             }
+            // Flow auto-updates, no need to manually refresh
         }
     }
 
@@ -234,5 +229,5 @@ sealed class NotesEvent {
     data class SearchQueryChanged(val query: String) : NotesEvent()
     data class CategorySelected(val category: String) : NotesEvent()
     data class DeleteNote(val noteId: String) : NotesEvent()
-    object RefreshNotes : NotesEvent()
+    // object RefreshNotes : NotesEvent() // Đã loại bỏ vì không sử dụng
 }

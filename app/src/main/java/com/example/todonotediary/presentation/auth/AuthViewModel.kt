@@ -1,6 +1,5 @@
 package com.example.todonotediary.presentation.auth
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.todonotediary.domain.usecase.auth.AuthUseCases
@@ -109,11 +108,25 @@ class AuthViewModel @Inject constructor(
                         _authState.value = AuthState.Authenticated(user)
                     },
                     onFailure = { exception ->
-                        _registerState.value = RegisterState.Error(exception.message ?: "Đăng ký thất bại")
+                        val errorMessage = when {
+                            exception.message?.contains("already been linked", ignoreCase = true) == true ->
+                                "Tài khoản này đã được đăng ký trước đó"
+                            exception.message?.contains("email", ignoreCase = true) == true ->
+                                "Email không hợp lệ"
+                            exception.message?.contains("password", ignoreCase = true) == true ->
+                                "Mật khẩu phải có ít nhất 6 ký tự"
+                            else -> exception.message ?: "Đăng ký thất bại"
+                        }
+                        _registerState.value = RegisterState.Error(errorMessage)
                     }
                 )
             } catch (e: Exception) {
-                _registerState.value = RegisterState.Error(e.message ?: "Đăng ký thất bại")
+                val errorMessage = when {
+                    e.message?.contains("already been linked", ignoreCase = true) == true ->
+                        "Tài khoản này đã được đăng ký trước đó"
+                    else -> e.message ?: "Đăng ký thất bại"
+                }
+                _registerState.value = RegisterState.Error(errorMessage)
             }
         }
     }

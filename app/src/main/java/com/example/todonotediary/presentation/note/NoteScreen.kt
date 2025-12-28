@@ -237,7 +237,10 @@ fun NotesGrid(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        items(notes) { note ->
+        items(
+            items = notes,
+            key = { note -> note.id } // Add key to optimize recomposition
+        ) { note ->
             NoteCard(
                 note = note,
                 onClick = { onNoteClick(note.id) },

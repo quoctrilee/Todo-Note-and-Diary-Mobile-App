@@ -1,0 +1,22 @@
+[33m1a93a3a[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m HEAD@{0}: pull origin main --rebase (finish): returning to refs/heads/main
+[33m1a93a3a[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m HEAD@{1}: pull origin main --rebase (pick): done final
+[33m35e57c0[m HEAD@{2}: pull origin main --rebase (pick): ui
+[33m46eb4e3[m HEAD@{3}: pull origin main --rebase (pick): done 18/5
+[33m2c1388f[m HEAD@{4}: pull origin main --rebase (pick): done user screen
+[33m0fb5250[m[33m ([m[1;31morigin/main[m[33m)[m HEAD@{5}: pull origin main --rebase (start): checkout 0fb52507156604329578d4a59f37be17b15df7ee
+[33ma118ad3[m HEAD@{6}: commit: done final
+[33m18b0bd4[m HEAD@{7}: commit: ui
+[33m982f0f6[m HEAD@{8}: commit: done 18/5
+[33m871bf63[m HEAD@{9}: commit: done user screen
+[33m051d22d[m HEAD@{10}: commit: done basic
+[33m8bbc08d[m HEAD@{11}: commit: done diaries
+[33ma4fb888[m HEAD@{12}: commit: done note v2
+[33m7d8885a[m HEAD@{13}: commit: done note
+[33m1afac4a[m HEAD@{14}: commit: done todo v2
+[33mf6821ed[m HEAD@{15}: commit: done todo v1
+[33m4dff0f0[m HEAD@{16}: commit: auth update v1
+[33m4145fae[m HEAD@{17}: commit: done auth
+[33m4e96f8e[m HEAD@{18}: commit: 5/3
+[33m88d9fc6[m HEAD@{19}: commit: back-end
+[33me910ee4[m HEAD@{20}: Branch: renamed refs/heads/master to refs/heads/main
+[33me910ee4[m HEAD@{22}: commit (initial): first commit

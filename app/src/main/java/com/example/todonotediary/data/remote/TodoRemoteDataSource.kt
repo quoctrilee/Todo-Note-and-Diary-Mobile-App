@@ -2,6 +2,7 @@ package com.example.todonotediary.data.remote
 
 import android.util.Log
 import com.example.todonotediary.domain.model.TodoEntity
+import com.example.todonotediary.utils.RetryHelper
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.tasks.await
@@ -72,18 +73,48 @@ class TodoRemoteDataSource @Inject constructor(
                     document.toObject(TodoEntity::class.java)?.copy(id = document.id)
                 }
 
-            // Lọc danh sách todos theo ngày đã chọn và điều kiện upcoming (deadline >= currentTime)
+            // Lọc danh sách todos cho upcoming:
+            // - Công việc chưa hoàn thành
+            // - Ngày được chọn nằm trong khoảng từ startAt đến deadline (so sánh theo ngày)
+            // - Deadline chưa quá hạn (>= currentTime)
             val filteredTodos = todos.filter { todo ->
                 val todoStartAt = todo.startAt ?: 0
-                val todoDeadline = todo.deadline ?: Long.MAX_VALUE
-                val todoIsCompleted = todo.isCompleted
-                val belongsToSelectedDay = (todoStartAt >= startOfDay && todoStartAt < endOfDay) ||
-                        (todoDeadline >= startOfDay && todoDeadline < endOfDay)
+                val todoDeadline = todo.deadline ?: 0
 
-                // Điều kiện upcoming: hạn chưa kết thúc hoặc chưa hoàn thành
-                val isUpcoming = todoDeadline >= currentTime && todoIsCompleted == false
+                // Ngày của todo.startAt (00:00:00)
+                val todoStartDay = Calendar.getInstance().apply {
+                    timeInMillis = todoStartAt
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }.timeInMillis
 
-                belongsToSelectedDay && isUpcoming
+                // Ngày của todo.deadline (23:59:59)
+                val todoDeadlineDay = Calendar.getInstance().apply {
+                    timeInMillis = todoDeadline
+                    set(Calendar.HOUR_OF_DAY, 23)
+                    set(Calendar.MINUTE, 59)
+                    set(Calendar.SECOND, 59)
+                    set(Calendar.MILLISECOND, 999)
+                }.timeInMillis
+
+                // End của ngày được chọn (23:59:59)
+                val endOfSelectedDay = Calendar.getInstance().apply {
+                    timeInMillis = startOfDay
+                    set(Calendar.HOUR_OF_DAY, 23)
+                    set(Calendar.MINUTE, 59)
+                    set(Calendar.SECOND, 59)
+                    set(Calendar.MILLISECOND, 999)
+                }.timeInMillis
+
+                // Kiểm tra: ngày được chọn nằm trong khoảng từ ngày bắt đầu đến ngày deadline
+                val isInDateRange = startOfDay >= todoStartDay && endOfSelectedDay <= todoDeadlineDay
+
+                // Điều kiện upcoming: chưa hoàn thành và deadline chưa quá hạn
+                val isUpcoming = !todo.isCompleted && todoDeadline >= currentTime
+
+                isInDateRange && isUpcoming
             }
 
 
@@ -94,7 +125,6 @@ class TodoRemoteDataSource @Inject constructor(
     }
 
     suspend fun getTodoPast(userId: String, selectedDate: Long): List<TodoEntity> {
-        val (startOfDay, endOfDay) = getStartAndEndOfDay(selectedDate)
         val currentTime = System.currentTimeMillis()
 
         return try {
@@ -109,18 +139,14 @@ class TodoRemoteDataSource @Inject constructor(
                     document.toObject(TodoEntity::class.java)?.copy(id = document.id)
                 }
 
-            // Lọc danh sách todos theo ngày đã chọn và điều kiện past (deadline < currentTime)
+            // Lọc danh sách todos cho past:
+            // - Công việc đã hoàn thành, HOẶC
+            // - Deadline đã qua so với ngày hiện tại (không phải ngày được chọn)
             val filteredTodos = todos.filter { todo ->
-                val todoStartAt = todo.startAt ?: 0
-                val todoDeadline = todo.deadline ?: 0  // Nếu không có deadline, coi như đã quá hạn
-                val todoIsCompleted = todo.isCompleted
-                val belongsToSelectedDay = (todoStartAt >= startOfDay && todoStartAt < endOfDay) ||
-                        (todoDeadline >= startOfDay && todoDeadline < endOfDay)
+                val todoDeadline = todo.deadline ?: 0
 
-                // Điều kiện past: hạn đã kết thúc
-                val isPast = todoDeadline > 0 && todoDeadline < currentTime || todo.isCompleted == true
-
-                belongsToSelectedDay && isPast
+                // Điều kiện past: đã hoàn thành HOẶC deadline đã qua (< currentTime)
+                todo.isCompleted || (todoDeadline > 0 && todoDeadline < currentTime)
             }
 
         filteredTodos
@@ -150,39 +176,40 @@ class TodoRemoteDataSource @Inject constructor(
     }
 
     suspend fun saveTodo(todo: TodoEntity): Result<TodoEntity> {
-        return try {
-            val currentTime = System.currentTimeMillis()
-            val todoWithTimestamp = todo.copy(
-                lastSyncTimestamp = currentTime,
-                createdAt = if (todo.id.isEmpty()) currentTime else todo.createdAt,
-                updatedAt = currentTime
-            )
+        return RetryHelper.retryWithExponentialBackoff {
+            try {
+                val currentTime = System.currentTimeMillis()
+                val todoWithTimestamp = todo.copy(
+                    lastSyncTimestamp = currentTime,
+                    createdAt = if (todo.id.isEmpty()) currentTime else todo.createdAt,
+                    updatedAt = currentTime
+                )
 
-            val todoRef = if (todo.id.isNotEmpty()) {
-                firestore.collection(COLLECTION_TODOS).document(todo.id)
-            } else {
-                firestore.collection(COLLECTION_TODOS).document()
+                val todoRef = if (todo.id.isNotEmpty()) {
+                    firestore.collection(COLLECTION_TODOS).document(todo.id)
+                } else {
+                    firestore.collection(COLLECTION_TODOS).document()
+                }
+
+                // Chuyển đổi TodoEntity thành Map với tên trường chính xác
+                val todoMap = hashMapOf(
+                    "userId" to todoWithTimestamp.userId,
+                    "title" to todoWithTimestamp.title,
+                    "description" to todoWithTimestamp.description,
+                    "isCompleted" to todoWithTimestamp.isCompleted,
+                    "createdAt" to todoWithTimestamp.createdAt,
+                    "updatedAt" to todoWithTimestamp.updatedAt,
+                    "startAt" to todoWithTimestamp.startAt,
+                    "deadline" to todoWithTimestamp.deadline,
+                    "lastSyncTimestamp" to todoWithTimestamp.lastSyncTimestamp,
+                    "isDeleted" to todoWithTimestamp.isDeleted
+                )
+
+                todoRef.set(todoMap).await()
+                todoWithTimestamp.copy(id = todoRef.id)
+            } catch (e: Exception) {
+                throw e
             }
-
-            // Chuyển đổi TodoEntity thành Map với tên trường chính xác
-            val todoMap = hashMapOf(
-                "userId" to todoWithTimestamp.userId,
-                "title" to todoWithTimestamp.title,
-                "description" to todoWithTimestamp.description,
-                "isCompleted" to todoWithTimestamp.isCompleted,  // Sử dụng tên trường chính xác
-                "createdAt" to todoWithTimestamp.createdAt,
-                "updatedAt" to todoWithTimestamp.updatedAt,
-                "startAt" to todoWithTimestamp.startAt,
-                "deadline" to todoWithTimestamp.deadline,
-                "lastSyncTimestamp" to todoWithTimestamp.lastSyncTimestamp,
-                "isDeleted" to todoWithTimestamp.isDeleted  // Sử dụng tên trường chính xác
-            )
-
-            todoRef.set(todoMap).await()
-
-            Result.success(todoWithTimestamp.copy(id = todoRef.id))
-        } catch (e: Exception) {
-            Result.failure(e)
         }
     }
 

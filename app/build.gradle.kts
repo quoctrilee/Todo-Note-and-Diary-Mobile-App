@@ -48,10 +48,7 @@ android {
 }
 
 dependencies {
-    implementation ("androidx.work:work-runtime-ktx:2.9.0")
-    implementation ("androidx.hilt:hilt-work:1.2.0")
     implementation("io.coil-kt:coil-compose:2.2.2")
-    implementation("com.jakewharton.timber:timber:5.0.1")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -81,11 +78,15 @@ dependencies {
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
-    implementation(libs.firebase.messaging)
 
     implementation(libs.material.icons.extended)
     implementation(libs.google.auth)
+    implementation("com.google.android.gms:play-services-safetynet:18.0.1")
 
+    // WorkManager for background sync
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation("androidx.hilt:hilt-work:1.1.0")
+    kapt("androidx.hilt:hilt-compiler:1.1.0")
 
     // Test
     kaptTest(libs.hilt.compiler)

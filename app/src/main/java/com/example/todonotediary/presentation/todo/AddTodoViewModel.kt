@@ -109,14 +109,14 @@ class AddTodoViewModel @Inject constructor(
                     userId = currentUser.uid,
                     title = state.title,
                     description = state.description,
-                    // Các trường dưới đây bây giờ luôn có giá trị vì chúng đã được kiểm tra trong validateForm
-                    startAt = state.startAt!!,
-                    deadline = state.deadline!!,
+                    // Safe access - đã được validate trước đó
+                    startAt = state.startAt ?: System.currentTimeMillis(),
+                    deadline = state.deadline ?: System.currentTimeMillis(),
                     isCompleted = false,
                     isDeleted = false,
                     createdAt = System.currentTimeMillis(),
                     updatedAt = System.currentTimeMillis(),
-                    lastSyncTimestamp = System.currentTimeMillis()
+                    lastSyncTimestamp = 0L
                 )
 
                 todoUseCases.addTodo(todo).fold(

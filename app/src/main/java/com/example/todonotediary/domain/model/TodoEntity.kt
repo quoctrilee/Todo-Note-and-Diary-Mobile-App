@@ -24,5 +24,7 @@ data class TodoEntity(
 
     @get:PropertyName("isDeleted")
     @set:PropertyName("isDeleted")
-    var isDeleted: Boolean = false
+    var isDeleted: Boolean = false,
+
+    var pendingDelete: Boolean = false
 )

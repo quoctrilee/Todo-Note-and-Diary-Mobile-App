@@ -315,7 +315,7 @@ fun DateItem(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+            verticalArrangement = Arrangement.SpaceEvenly,
             modifier = Modifier.fillMaxSize()
         ) {
             Text(
@@ -357,7 +357,10 @@ fun DiaryList(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        items(diaries) { diary ->
+        items(
+            items = diaries,
+            key = { diary -> diary.id } 
+        ) { diary ->
             DiaryCard(
                 diary = diary,
                 onClick = { onDiaryClick(diary) },
@@ -532,12 +535,15 @@ fun CalendarPicker(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .navigationBarsPadding()
+            .padding(bottom = 12.dp)
+            .heightIn(max = 480.dp),
         shape = RoundedCornerShape(16.dp),
         tonalElevation = 6.dp
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -565,7 +571,7 @@ fun CalendarPicker(
                 headline = null,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .wrapContentHeight()
+                    .heightIn(min = 300.dp, max = 340.dp)
             )
 
             Row(

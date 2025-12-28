@@ -6,10 +6,12 @@ import com.example.todonotediary.domain.model.DiaryEntity
 import com.example.todonotediary.domain.usecase.auth.AuthUseCases
 import com.example.todonotediary.domain.usecase.diary.DiaryUseCases
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Calendar
 import javax.inject.Inject
 
@@ -151,25 +153,19 @@ class DiaryViewModel @Inject constructor(
     }
 
     fun deleteDiary(diaryId: String) {
-        _uiState.update { it.copy(isLoading = true) }
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             diaryUseCases.deleteDiary(diaryId).fold(
                 onSuccess = {
-                    // Refresh diaries list after deletion
-                    uiState.value.selectedDate?.let {
-                        getDiariesByDate(userId, it)
-                    } ?: if (uiState.value.searchQuery.isNotEmpty()) {
-                        searchDiaries(uiState.value.searchQuery)
-                    } else {
-                        getAllDiaries(userId)
-                    }
+                    // Flow auto-updates, no need to manually refresh
                 },
                 onFailure = { error ->
-                    _uiState.update { currentState ->
-                        currentState.copy(
-                            error = error.message ?: "Error deleting diary",
-                            isLoading = false
-                        )
+                    withContext(Dispatchers.Main) {
+                        _uiState.update { currentState ->
+                            currentState.copy(
+                                error = error.message ?: "Error deleting diary",
+                                isLoading = false
+                            )
+                        }
                     }
                 }
             )

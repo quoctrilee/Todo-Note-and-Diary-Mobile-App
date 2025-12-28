@@ -1,5 +1,6 @@
 package com.example.todonotediary.presentation.todo
 
+import android.app.DatePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,9 +12,11 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -24,12 +27,16 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.todonotediary.domain.model.TodoEntity
 import java.text.SimpleDateFormat
 import java.util.*
@@ -56,6 +63,21 @@ fun TodoScreen(
 ) {
     val todoState by viewModel.todoState.collectAsState()
     val weekDays = remember { viewModel.generateWeekDays() }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val context = LocalContext.current
+
+    // Auto-refresh when screen comes back from AddTodoScreen
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshCurrentTab()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -77,21 +99,47 @@ fun TodoScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Date selector section
-            DateSelector(
-                days = weekDays,
-                selectedDayOfWeek = todoState.selectedDayOfWeek,
-                selectedDayNumber = todoState.selectedDayNumber,
-                onDaySelected = { dayItem ->
-                    viewModel.selectDate(
-                        dayItem.dayOfWeek,
-                        dayItem.dayNumber,
-                        dayItem.date
-                    )
-                }
-            )
+            // Date selector section - only show for Upcoming tab
+            if (todoState.selectedTab == TodoTab.UPCOMING) {
+                DateSelector(
+                    days = weekDays,
+                    selectedDayOfWeek = todoState.selectedDayOfWeek,
+                    selectedDayNumber = todoState.selectedDayNumber,
+                    onDaySelected = { dayItem ->
+                        viewModel.selectDate(
+                            dayItem.dayOfWeek,
+                            dayItem.dayNumber,
+                            dayItem.date
+                        )
+                    },
+                    onCalendarClick = {
+                        showDatePicker(
+                            context = context,
+                            onDateSelected = { selectedTimestamp ->
+                                // Convert timestamp to DayItem format
+                                val calendar = Calendar.getInstance().apply {
+                                    timeInMillis = selectedTimestamp
+                                }
+                                val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
+                                val dayOfMonth = calendar.get(Calendar.DAY_OF_MONTH)
+                                val dayName = when (dayOfWeek) {
+                                    Calendar.MONDAY -> "T2"
+                                    Calendar.TUESDAY -> "T3"
+                                    Calendar.WEDNESDAY -> "T4"
+                                    Calendar.THURSDAY -> "T5"
+                                    Calendar.FRIDAY -> "T6"
+                                    Calendar.SATURDAY -> "T7"
+                                    Calendar.SUNDAY -> "CN"
+                                    else -> "CN"
+                                }
+                                viewModel.selectDate(dayName, dayOfMonth.toString(), selectedTimestamp)
+                            }
+                        )
+                    }
+                )
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp))
+            }
 
             // Todo list section
             TodoList(
@@ -183,7 +231,8 @@ fun DateSelector(
     days: List<DayItem>,
     selectedDayOfWeek: String,
     selectedDayNumber: String,
-    onDaySelected: (DayItem) -> Unit
+    onDaySelected: (DayItem) -> Unit,
+    onCalendarClick: () -> Unit
 ) {
     val listState = rememberLazyListState()
 
@@ -200,25 +249,42 @@ fun DateSelector(
         )
     }
 
-    LazyRow(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        state = listState,
-        contentPadding = PaddingValues(horizontal = 16.dp)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        items(days) { dayItem ->
-            val isSelected = dayItem.dayOfWeek == selectedDayOfWeek &&
-                    dayItem.dayNumber == selectedDayNumber
+        LazyRow(
+            modifier = Modifier
+                .weight(1f)
+                .padding(vertical = 8.dp),
+            state = listState,
+            contentPadding = PaddingValues(horizontal = 16.dp)
+        ) {
+            items(days) { dayItem ->
+                val isSelected = dayItem.dayOfWeek == selectedDayOfWeek &&
+                        dayItem.dayNumber == selectedDayNumber
 
-            DayItem(
-                dayOfWeek = dayItem.dayOfWeek,
-                dayNumber = dayItem.dayNumber,
-                isSelected = isSelected,
-                onClick = { onDaySelected(dayItem) }
+                DayItem(
+                    dayOfWeek = dayItem.dayOfWeek,
+                    dayNumber = dayItem.dayNumber,
+                    isSelected = isSelected,
+                    onClick = { onDaySelected(dayItem) }
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+            }
+        }
+
+        // Calendar icon button
+        IconButton(
+            onClick = onCalendarClick,
+            modifier = Modifier.padding(end = 8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.DateRange,
+                contentDescription = "Chọn ngày",
+                tint = PrimaryColor
             )
-
-            Spacer(modifier = Modifier.width(12.dp))
         }
     }
 }
@@ -298,7 +364,10 @@ fun TodoList(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            items(todos) { todo ->
+            items(
+                items = todos,
+                key = { todo -> todo.id } // Add key to optimize recomposition
+            ) { todo ->
                 TodoItem(
                     todo = todo,
                     selectedTab = selectedTab,
@@ -401,7 +470,7 @@ fun TodoItem(
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    textDecoration = if (todo.isCompleted) TextDecoration.LineThrough else TextDecoration.None
+                    textDecoration = TextDecoration.None
                 )
 
                 if (todo.description.isNotBlank()) {
@@ -412,7 +481,7 @@ fun TodoItem(
                         fontSize = 14.sp,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
-                        textDecoration = if (todo.isCompleted) TextDecoration.LineThrough else TextDecoration.None
+                        textDecoration = TextDecoration.None
                     )
                 }
 
@@ -500,4 +569,32 @@ fun TodoItem(
             }
         }
     }
+}
+
+// Helper function to show date picker dialog
+private fun showDatePicker(
+    context: android.content.Context,
+    onDateSelected: (Long) -> Unit
+) {
+    val calendar = Calendar.getInstance()
+
+    val datePickerDialog = DatePickerDialog(
+        context,
+        { _, year, month, dayOfMonth ->
+            calendar.set(Calendar.YEAR, year)
+            calendar.set(Calendar.MONTH, month)
+            calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+            calendar.set(Calendar.HOUR_OF_DAY, 0)
+            calendar.set(Calendar.MINUTE, 0)
+            calendar.set(Calendar.SECOND, 0)
+            calendar.set(Calendar.MILLISECOND, 0)
+
+            onDateSelected(calendar.timeInMillis)
+        },
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
+    )
+
+    datePickerDialog.show()
 }

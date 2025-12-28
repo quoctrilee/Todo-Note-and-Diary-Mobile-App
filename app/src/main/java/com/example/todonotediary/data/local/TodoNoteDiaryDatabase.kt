@@ -8,7 +8,7 @@ import com.example.todonotediary.domain.model.TodoEntity
 
 @Database(
     entities = [TodoEntity::class, NoteEntity::class, DiaryEntity::class],
-    version = 1,
+    version = 4,
     exportSchema = false
 )
 

@@ -6,6 +6,7 @@ import com.example.todonotediary.data.local.TodoNoteDiaryDatabase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
@@ -13,13 +14,16 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
-    @Provides@Singleton
-    fun provideDatabase(appContext: Context): TodoNoteDiaryDatabase {
+    @Provides
+    @Singleton
+    fun provideDatabase(@ApplicationContext appContext: Context): TodoNoteDiaryDatabase {
         return Room.databaseBuilder(
             appContext,
             TodoNoteDiaryDatabase::class.java,
             "todo_note_diary_db"
-        ).build()
+        )
+        .fallbackToDestructiveMigration()
+        .build()
     }
 
     @Provides

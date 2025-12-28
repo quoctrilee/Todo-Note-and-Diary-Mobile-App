@@ -7,6 +7,7 @@ interface AuthRepository {
     fun getCrurrentUser(): FirebaseUser?
     suspend fun signInwWithGoogle(idToken: String): Result<Pair<FirebaseUser, Boolean>>
     suspend fun loginWithEmail(email: String, password: String): Result<FirebaseUser>
+    suspend fun registerWithEmail(email: String, password: String, displayName: String): Result<FirebaseUser>
     suspend fun signOut()
     suspend fun saveUserToFirebase(email: String, password: String, displayName: String): Result<FirebaseUser>
     suspend fun updateUserAvatar(userId: String, avatarName: String): Result<Unit>
