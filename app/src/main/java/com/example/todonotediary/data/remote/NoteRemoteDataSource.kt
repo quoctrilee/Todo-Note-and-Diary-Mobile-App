@@ -13,24 +13,6 @@ class NoteRemoteDataSource @Inject constructor(
         private const val COLLECTION_NOTES = "notes"
     }
 
-    // Lấy danh sách notes theo userId
-    suspend fun getNotes(userId: String): List<NoteEntity> {
-        return try {
-            firestore.collection(COLLECTION_NOTES)
-                .whereEqualTo("userId", userId)
-                .get()
-                .await()
-                .documents
-                .mapNotNull { document ->
-                    document.toObject(NoteEntity::class.java)?.copy(
-                        id = document.id
-                    )
-                }
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
-
     suspend fun getCategories(userId: String): List<String> {
         return try {
             firestore.collection("notes")
@@ -41,49 +23,6 @@ class NoteRemoteDataSource @Inject constructor(
                 .documents
                 .mapNotNull { it.getString("category") }
                 .distinct()
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
-
-
-    suspend fun searchByTitleOrContent(userId: String, search: String): List<NoteEntity> {
-        return try {
-            val keyword = search.trim().lowercase()
-
-            firestore.collection(COLLECTION_NOTES)
-                .whereEqualTo("userId", userId)
-                .whereEqualTo("isDeleted", false)
-                .get()
-                .await()
-                .documents
-                .mapNotNull { document ->
-                    document.toObject(NoteEntity::class.java)?.copy(id = document.id)
-                }
-                .filter { note ->
-                    note.title?.lowercase()?.contains(keyword) == true ||
-                            note.content?.lowercase()?.contains(keyword) == true
-                }
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
-
-
-    suspend fun getNotesByCategory(userId: String, category: String): List<NoteEntity> {
-        return try {
-            firestore.collection(COLLECTION_NOTES)
-                .whereEqualTo("userId", userId)
-                .whereEqualTo("category", category)
-                .whereEqualTo("isDeleted", false)
-                .get()
-                .await()
-                .documents
-                .mapNotNull { document ->
-                    document.toObject(NoteEntity::class.java)?.copy(
-                        id = document.id
-                    )
-                }
         } catch (e: Exception) {
             emptyList()
         }
@@ -138,25 +77,6 @@ class NoteRemoteDataSource @Inject constructor(
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
-        }
-    }
-
-    // Lấy các note đã được thay đổi sau lastSyncTimestamp
-    suspend fun getNotesUpdatedAfter(userId: String, lastSyncTimestamp: Long): List<NoteEntity> {
-        return try {
-            firestore.collection(COLLECTION_NOTES)
-                .whereEqualTo("userId", userId)
-                .whereGreaterThan("lastSyncTimestamp", lastSyncTimestamp)
-                .get()
-                .await()
-                .documents
-                .mapNotNull { document ->
-                    document.toObject(NoteEntity::class.java)?.copy(
-                        id = document.id
-                    )
-                }
-        } catch (e: Exception) {
-            emptyList()
         }
     }
 }

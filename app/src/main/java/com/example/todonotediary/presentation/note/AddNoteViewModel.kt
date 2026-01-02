@@ -5,8 +5,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.todonotediary.domain.model.NoteEntity
-import com.example.todonotediary.domain.usecase.note.AddNoteUseCase
-import com.example.todonotediary.domain.usecase.note.GetCategoryUseCase
+import com.example.todonotediary.domain.usecase.note.NoteUseCases
 import com.example.todonotediary.domain.usecase.auth.AuthUseCases
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,8 +19,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class AddNoteViewModel @Inject constructor(
-    private val addNoteUseCase: AddNoteUseCase,
-    private val getCategoryUseCase: GetCategoryUseCase,
+    private val noteUseCases: NoteUseCases,
     private val authUseCases: AuthUseCases
 ) : ViewModel() {
 
@@ -76,7 +74,7 @@ class AddNoteViewModel @Inject constructor(
                 }
 
                 val userId = currentUser.uid
-                val categories = getCategoryUseCase(userId)
+                val categories = noteUseCases.getCategoryUseCase(userId)
 
                 // Thiết lập danh mục mặc định nếu danh sách rỗng hoặc không có "General"
                 val defaultCategory = "General"
@@ -190,7 +188,7 @@ class AddNoteViewModel @Inject constructor(
                 val backgroundColorHex = String.format("#%06X", 0xFFFFFF and currentState.backgroundColor.toArgb())
 
                 // Gọi use case để thêm ghi chú với cả thông tin màu nền
-                val result = addNoteUseCase(
+                val result = noteUseCases.addNote(
                     title = currentState.title,
                     content = currentState.content,
                     userId = userId,

@@ -6,7 +6,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.todonotediary.domain.model.TodoEntity
 import com.example.todonotediary.domain.usecase.auth.AuthUseCases
 import com.example.todonotediary.domain.usecase.todo.TodoUseCases
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,7 +14,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import java.util.Date
-import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
@@ -104,22 +102,14 @@ class AddTodoViewModel @Inject constructor(
                     return@launch
                 }
 
-                val todo = TodoEntity(
-                    id = UUID.randomUUID().toString(),
+                // Gọi usecase với tham số riêng lẻ, usecase sẽ tự tạo entity
+                todoUseCases.addTodo(
                     userId = currentUser.uid,
                     title = state.title,
                     description = state.description,
-                    // Safe access - đã được validate trước đó
                     startAt = state.startAt ?: System.currentTimeMillis(),
-                    deadline = state.deadline ?: System.currentTimeMillis(),
-                    isCompleted = false,
-                    isDeleted = false,
-                    createdAt = System.currentTimeMillis(),
-                    updatedAt = System.currentTimeMillis(),
-                    lastSyncTimestamp = 0L
-                )
-
-                todoUseCases.addTodo(todo).fold(
+                    deadline = state.deadline ?: System.currentTimeMillis()
+                ).fold(
                     onSuccess = {
                         _uiEvent.emit(AddTodoUiEvent.TodoSaved)
                     },

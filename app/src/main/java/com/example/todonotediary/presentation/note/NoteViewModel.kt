@@ -76,10 +76,6 @@ class NoteViewModel @Inject constructor(
             is NotesEvent.DeleteNote -> {
                 deleteNote(event.noteId)
             }
-            is NotesEvent.RefreshNotes -> {
-                loadCategories()
-                getNotes()
-            }
         }
     }
 
