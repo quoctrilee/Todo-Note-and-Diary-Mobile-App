@@ -19,19 +19,52 @@ class TodoRepositoryImpl @Inject constructor(
     private val syncManager: SyncManager
 ) : TodoRepository {
 
+    // Cache last sync time to avoid too frequent syncs
+    private var lastSyncTime = 0L
+    private val syncIntervalMs = 30_000L // 30 seconds
+
+    private fun shouldSync(): Boolean {
+        val now = System.currentTimeMillis()
+        return (now - lastSyncTime) > syncIntervalMs
+    }
+
     override fun getTodos(userId: String): Flow<List<TodoEntity>> {
-        // Pure offline-first: only emit from local database
-        // Background sync via SyncWorker will keep data updated
-        return localDataSource.getTodosFlow(userId)
-            .catch { exception ->
-                Log.e("TodoRepository", "Error loading todos", exception)
-                emit(emptyList())
+        return flow {
+            // Trigger sync from remote first if online and not synced recently
+            if (networkManager.isCurrentlyOnline() && shouldSync()) {
+                try {
+                    syncFromRemote(userId)
+                    lastSyncTime = System.currentTimeMillis()
+                    Log.d("TodoRepository", "Synced todos from Firebase before emitting")
+                } catch (e: Exception) {
+                    Log.e("TodoRepository", "Failed to sync from remote, continuing with local data", e)
+                }
             }
+            
+            // Emit from local database (which now has updated data)
+            localDataSource.getTodosFlow(userId)
+                .collect { todos ->
+                    emit(todos)
+                }
+        }.catch { exception ->
+            Log.e("TodoRepository", "Error loading todos", exception)
+            emit(emptyList())
+        }
     }
 
     override fun getTodoUpcoming(userId: String, selectedDate: Long): Flow<List<TodoEntity>> {
-        // Pure offline-first: filter local data only
         return flow {
+            // Trigger sync from remote first if online and not synced recently
+            if (networkManager.isCurrentlyOnline() && shouldSync()) {
+                try {
+                    syncFromRemote(userId)
+                    lastSyncTime = System.currentTimeMillis()
+                    Log.d("TodoRepository", "Synced todos from Firebase before getting upcoming")
+                } catch (e: Exception) {
+                    Log.e("TodoRepository", "Failed to sync from remote, continuing with local data", e)
+                }
+            }
+            
             localDataSource.getTodosFlow(userId)
                 .collect { todos ->
                     val upcomingTodos = filterUpcomingTodos(todos, selectedDate)
@@ -44,8 +77,18 @@ class TodoRepositoryImpl @Inject constructor(
     }
 
     override fun getTodoPast(userId: String, selectedDate: Long): Flow<List<TodoEntity>> {
-        // Pure offline-first: filter local data only
         return flow {
+            // Trigger sync from remote first if online and not synced recently
+            if (networkManager.isCurrentlyOnline() && shouldSync()) {
+                try {
+                    syncFromRemote(userId)
+                    lastSyncTime = System.currentTimeMillis()
+                    Log.d("TodoRepository", "Synced todos from Firebase before getting past")
+                } catch (e: Exception) {
+                    Log.e("TodoRepository", "Failed to sync from remote, continuing with local data", e)
+                }
+            }
+            
             localDataSource.getTodosFlow(userId)
                 .collect { todos ->
                     val pastTodos = filterPastTodos(todos, selectedDate)
@@ -80,6 +123,8 @@ class TodoRepositoryImpl @Inject constructor(
             if (networkManager.isCurrentlyOnline()) {
                 val remoteResult = remoteDataSource.saveTodo(todo)
                 if (remoteResult.isSuccess) {
+                    // Reset sync cache to force refresh next time
+                    lastSyncTime = 0L
                     Result.success(todo)
                 } else {
                     // Keep in local, schedule sync for later
@@ -107,6 +152,8 @@ class TodoRepositoryImpl @Inject constructor(
             if (networkManager.isCurrentlyOnline()) {
                 val remoteResult = remoteDataSource.saveTodo(updatedTodo)
                 if (remoteResult.isSuccess) {
+                    // Reset sync cache to force refresh next time
+                    lastSyncTime = 0L
                     Result.success(Unit)
                 } else {
                     // Keep local changes, schedule sync for later
@@ -190,6 +237,58 @@ class TodoRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun syncFromRemote(userId: String): Result<Unit> {
+        return try {
+            if (!networkManager.isCurrentlyOnline()) {
+                Log.d("TodoRepository", "No network, skipping remote sync")
+                return Result.success(Unit)
+            }
+
+            // 1. Fetch all todos from Firebase
+            val remoteResult = remoteDataSource.getTodos(userId)
+            if (remoteResult.isFailure) {
+                Log.e("TodoRepository", "Failed to fetch todos from Firebase", remoteResult.exceptionOrNull())
+                return Result.failure(remoteResult.exceptionOrNull() ?: Exception("Unknown error"))
+            }
+
+            val remoteTodos = remoteResult.getOrNull() ?: emptyList()
+            Log.d("TodoRepository", "Fetched ${remoteTodos.size} todos from Firebase")
+
+            // 2. Get all local todos
+            val localTodos = localDataSource.getAllTodos()
+            val userLocalTodos = localTodos.filter { it.userId == userId }
+            
+            // 3. Merge logic: Firebase is source of truth for synced data
+            remoteTodos.forEach { remoteTodo ->
+                val localTodo = userLocalTodos.find { it.id == remoteTodo.id }
+                
+                if (localTodo == null) {
+                    // New todo from Firebase - insert to local
+                    localDataSource.insertTodo(remoteTodo)
+                    Log.d("TodoRepository", "Inserted new todo from Firebase: ${remoteTodo.id}")
+                } else {
+                    // Todo exists locally - check if we should update
+                    // Only update if remote is newer AND local doesn't have pending changes
+                    val hasLocalPendingChanges = localTodo.lastSyncTimestamp == 0L || localTodo.pendingDelete
+                    
+                    if (!hasLocalPendingChanges && remoteTodo.updatedAt > localTodo.updatedAt) {
+                        // Remote is newer and local has no pending changes - update local
+                        localDataSource.insertTodo(remoteTodo)
+                        Log.d("TodoRepository", "Updated todo from Firebase: ${remoteTodo.id}")
+                    } else if (hasLocalPendingChanges) {
+                        Log.d("TodoRepository", "Skipping update for todo ${remoteTodo.id} - has pending local changes")
+                    }
+                }
+            }
+
+            Log.d("TodoRepository", "Sync from remote completed successfully")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("TodoRepository", "Error syncing from remote", e)
+            Result.failure(e)
+        }
+    }
+
     // Helper functions to filter todos locally
     private fun filterUpcomingTodos(todos: List<TodoEntity>, selectedDate: Long): List<TodoEntity> {
         val currentTime = System.currentTimeMillis()
@@ -211,7 +310,7 @@ class TodoRepositoryImpl @Inject constructor(
 
         return todos.filter { todo ->
             val todoStartAt = todo.startAt ?: 0L
-            val todoDeadline = todo.deadline ?: 0L
+            val todoDeadline = todo.deadline // Keep nullable
 
             // Ngày của todo.startAt (00:00:00)
             val todoStartDay = java.util.Calendar.getInstance().apply {
@@ -222,21 +321,26 @@ class TodoRepositoryImpl @Inject constructor(
                 set(java.util.Calendar.MILLISECOND, 0)
             }.timeInMillis
 
-            // Ngày của todo.deadline (23:59:59)
-            val todoDeadlineDay = java.util.Calendar.getInstance().apply {
-                timeInMillis = todoDeadline
-                set(java.util.Calendar.HOUR_OF_DAY, 23)
-                set(java.util.Calendar.MINUTE, 59)
-                set(java.util.Calendar.SECOND, 59)
-                set(java.util.Calendar.MILLISECOND, 999)
-            }.timeInMillis
-
-            // Kiểm tra: ngày được chọn nằm trong khoảng từ ngày bắt đầu đến ngày deadline
-            val isInDateRange = startOfSelectedDay >= todoStartDay && endOfSelectedDay <= todoDeadlineDay
+            // Kiểm tra ngày: nếu có deadline, kiểm tra range; nếu không, chỉ kiểm tra startAt
+            val isInDateRange = if (todoDeadline != null) {
+                // Ngày của todo.deadline (23:59:59)
+                val todoDeadlineDay = java.util.Calendar.getInstance().apply {
+                    timeInMillis = todoDeadline
+                    set(java.util.Calendar.HOUR_OF_DAY, 23)
+                    set(java.util.Calendar.MINUTE, 59)
+                    set(java.util.Calendar.SECOND, 59)
+                    set(java.util.Calendar.MILLISECOND, 999)
+                }.timeInMillis
+                // Kiểm tra: ngày được chọn nằm trong khoảng từ ngày bắt đầu đến ngày deadline
+                startOfSelectedDay >= todoStartDay && endOfSelectedDay <= todoDeadlineDay
+            } else {
+                // Không có deadline, chỉ kiểm tra startAt có nằm trong ngày được chọn
+                todoStartDay == startOfSelectedDay
+            }
 
             // Điều kiện upcoming: (cả completed lẫn chưa completed) vẫn hiển thị trong upcoming
             // cho đến khi deadline đã qua. Chỉ loại bỏ todo đã xóa.
-            val isUpcoming = !todo.isDeleted && (todoDeadline == 0L || todoDeadline >= currentTime)
+            val isUpcoming = !todo.isDeleted && (todoDeadline == null || todoDeadline >= currentTime)
 
             isInDateRange && isUpcoming
         }.sortedWith(compareBy(
@@ -250,10 +354,10 @@ class TodoRepositoryImpl @Inject constructor(
 
         // Past không cần filter theo selectedDate - hiển thị tất cả past todos
         return todos.filter { todo ->
-            val todoDeadline = todo.deadline ?: 0L
+            val todoDeadline = todo.deadline // Keep nullable
 
-            // Điều kiện past: chưa xóa VÀ deadline đã qua
-            !todo.isDeleted && (todoDeadline > 0L && todoDeadline < currentTime)
+            // Điều kiện past: chưa xóa VÀ có deadline VÀ deadline đã qua
+            !todo.isDeleted && todoDeadline != null && todoDeadline < currentTime
         }.sortedWith(
             compareBy<TodoEntity> { it.deadline ?: Long.MAX_VALUE }
         )

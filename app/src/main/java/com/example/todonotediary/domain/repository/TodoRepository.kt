@@ -19,4 +19,6 @@ interface TodoRepository {
     suspend fun deleteTodo(todoId: String): Result<Unit>
 
     suspend fun updateTodoCompletionStatus(todoId: String, isCompleted: Boolean): Result<Unit>
+    
+    suspend fun syncFromRemote(userId: String): Result<Unit>
 }

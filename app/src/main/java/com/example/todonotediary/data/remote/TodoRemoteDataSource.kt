@@ -30,6 +30,26 @@ class TodoRemoteDataSource @Inject constructor(
         }
     }
 
+    // Lấy tất cả todos của user từ Firebase
+    suspend fun getTodos(userId: String): Result<List<TodoEntity>> {
+        return try {
+            val snapshot = firestore.collection(COLLECTION_TODOS)
+                .whereEqualTo("userId", userId)
+                .whereEqualTo("isDeleted", false)
+                .get()
+                .await()
+
+            val todos = snapshot.documents.mapNotNull { document ->
+                document.toObject(TodoEntity::class.java)?.copy(
+                    id = document.id
+                )
+            }
+            Result.success(todos)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun saveTodo(todo: TodoEntity): Result<TodoEntity> {
         return RetryHelper.retryWithExponentialBackoff {
             try {

@@ -54,7 +54,8 @@ class SyncWorker @AssistedInject constructor(
 
             Log.d(TAG, "Starting background sync for user: $userId")
 
-            // Only upload pending changes - local is source of truth
+            // Two-way sync: Download from Firebase first, then upload pending changes
+            downloadFromRemote(userId)
             syncPendingTodos(userId)
             syncPendingNotes(userId)
             syncPendingDiaries(userId)
@@ -64,6 +65,44 @@ class SyncWorker @AssistedInject constructor(
         } catch (e: Exception) {
             Log.e(TAG, "Error during background sync", e)
             Result.retry()
+        }
+    }
+
+    private suspend fun downloadFromRemote(userId: String) {
+        try {
+            Log.d(TAG, "Downloading data from Firebase for user: $userId")
+            
+            // Download todos from Firebase
+            val todosResult = todoRemoteDataSource.getTodos(userId)
+            if (todosResult.isSuccess) {
+                val remoteTodos = todosResult.getOrNull() ?: emptyList()
+                Log.d(TAG, "Downloaded ${remoteTodos.size} todos from Firebase")
+                
+                // Get local todos to compare
+                val localTodos = todoDao.getAllTodos().filter { it.userId == userId }
+                
+                remoteTodos.forEach { remoteTodo ->
+                    val localTodo = localTodos.find { it.id == remoteTodo.id }
+                    
+                    if (localTodo == null) {
+                        // New from Firebase - insert
+                        todoDao.insertTodo(remoteTodo)
+                        Log.d(TAG, "Inserted new todo from Firebase: ${remoteTodo.id}")
+                    } else {
+                        // Check if we should update
+                        val hasLocalPendingChanges = localTodo.lastSyncTimestamp == 0L || localTodo.pendingDelete
+                        
+                        if (!hasLocalPendingChanges && remoteTodo.updatedAt > localTodo.updatedAt) {
+                            todoDao.insertTodo(remoteTodo)
+                            Log.d(TAG, "Updated todo from Firebase: ${remoteTodo.id}")
+                        }
+                    }
+                }
+            }
+            
+            Log.d(TAG, "Download from Firebase completed")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error downloading from Firebase", e)
         }
     }
 

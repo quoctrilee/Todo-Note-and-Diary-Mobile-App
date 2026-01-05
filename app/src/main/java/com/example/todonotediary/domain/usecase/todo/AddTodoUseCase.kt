@@ -13,7 +13,7 @@ class AddTodoUseCase @Inject constructor(
         title: String,
         description: String,
         startAt: Long,
-        deadline: Long
+        deadline: Long?
     ): Result<TodoEntity> {
         val currentTime = System.currentTimeMillis()
         val todo = TodoEntity(

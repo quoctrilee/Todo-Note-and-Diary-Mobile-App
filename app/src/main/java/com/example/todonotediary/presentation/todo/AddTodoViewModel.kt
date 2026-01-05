@@ -108,7 +108,7 @@ class AddTodoViewModel @Inject constructor(
                     title = state.title,
                     description = state.description,
                     startAt = state.startAt ?: System.currentTimeMillis(),
-                    deadline = state.deadline ?: System.currentTimeMillis()
+                    deadline = state.deadline
                 ).fold(
                     onSuccess = {
                         _uiEvent.emit(AddTodoUiEvent.TodoSaved)

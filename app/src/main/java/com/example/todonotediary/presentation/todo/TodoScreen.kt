@@ -1,6 +1,9 @@
 package com.example.todonotediary.presentation.todo
 
+import android.Manifest
 import android.app.DatePickerDialog
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,13 +17,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -38,6 +44,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.todonotediary.domain.model.TodoEntity
+import com.example.todonotediary.presentation.ai.VoiceAssistantViewModel
+import com.example.todonotediary.presentation.ai.VoiceAssistantEvent
+import com.example.todonotediary.presentation.ai.VoiceAssistantUiEvent
+import com.example.todonotediary.presentation.ai.components.VoiceAssistantBottomSheet
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -59,12 +69,46 @@ private val CardBorderWidth = 1.dp
 fun TodoScreen(
     onNavigateToAddTodo: () -> Unit = {},
     onNavigateToEditTodo: (String) -> Unit = {},
-    viewModel: TodoViewModel = hiltViewModel()
+    viewModel: TodoViewModel = hiltViewModel(),
+    voiceAssistantViewModel: VoiceAssistantViewModel = hiltViewModel()
 ) {
     val todoState by viewModel.todoState.collectAsState()
+    val voiceState by voiceAssistantViewModel.state.collectAsState()
     val weekDays = remember { viewModel.generateWeekDays() }
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
+    
+    var showVoiceSheet by remember { mutableStateOf(false) }
+    
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            showVoiceSheet = true
+            voiceAssistantViewModel.onEvent(VoiceAssistantEvent.OnMicClick)
+        }
+    }
+    
+    // Listen to voice assistant UI events
+    LaunchedEffect(Unit) {
+        voiceAssistantViewModel.uiEvent.collect { event ->
+            when (event) {
+                is VoiceAssistantUiEvent.TodoAdded -> {
+                    viewModel.refreshCurrentTab()
+                }
+                is VoiceAssistantUiEvent.DismissSheet -> {
+                    showVoiceSheet = false
+                }
+                is VoiceAssistantUiEvent.ShowToast -> {
+                }
+            }
+        }
+    }
+    
+    // Auto-refresh when voice state is visible
+    LaunchedEffect(voiceState.isVisible) {
+        showVoiceSheet = voiceState.isVisible
+    }
 
     // Auto-refresh when screen comes back from AddTodoScreen
     DisposableEffect(lifecycleOwner) {
@@ -155,6 +199,34 @@ fun TodoScreen(
                 }
             )
         }
+        
+        // Voice Assistant FAB
+        FloatingActionButton(
+            onClick = {
+                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(24.dp),
+            containerColor = PrimaryColor,
+            contentColor = Color.White
+        ) {
+            Icon(
+                imageVector = Icons.Default.Mic,
+                contentDescription = "Voice Assistant",
+                modifier = Modifier.size(28.dp)
+            )
+        }
+        
+        // Voice Assistant Bottom Sheet
+        VoiceAssistantBottomSheet(
+            state = voiceState,
+            onEvent = voiceAssistantViewModel::onEvent,
+            onDismiss = {
+                voiceAssistantViewModel.onEvent(VoiceAssistantEvent.OnDismiss)
+                showVoiceSheet = false
+            }
+        )
     }
 }
 
