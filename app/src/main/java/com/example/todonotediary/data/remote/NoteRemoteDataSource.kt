@@ -28,6 +28,26 @@ class NoteRemoteDataSource @Inject constructor(
         }
     }
 
+    // Lấy tất cả notes của user từ Firebase
+    suspend fun getNotes(userId: String): Result<List<NoteEntity>> {
+        return try {
+            val snapshot = firestore.collection(COLLECTION_NOTES)
+                .whereEqualTo("userId", userId)
+                .whereEqualTo("isDeleted", false)
+                .get()
+                .await()
+
+            val notes = snapshot.documents.mapNotNull { document ->
+                document.toObject(NoteEntity::class.java)?.copy(
+                    id = document.id
+                )
+            }
+            Result.success(notes)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
 
     // Lấy một note theo id
     suspend fun getNoteById(noteId: String): NoteEntity? {

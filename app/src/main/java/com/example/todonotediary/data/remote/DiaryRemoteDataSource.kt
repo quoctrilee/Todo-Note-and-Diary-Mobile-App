@@ -30,6 +30,26 @@ class DiaryRemoteDataSource @Inject constructor(
         }
     }
 
+    // Lấy tất cả diaries của user từ Firebase
+    suspend fun getDiaries(userId: String): Result<List<DiaryEntity>> {
+        return try {
+            val snapshot = firestore.collection(COLLECTION_DIARIES)
+                .whereEqualTo("userId", userId)
+                .whereEqualTo("isDeleted", false)
+                .get()
+                .await()
+
+            val diaries = snapshot.documents.mapNotNull { document ->
+                document.toObject(DiaryEntity::class.java)?.copy(
+                    id = document.id
+                )
+            }
+            Result.success(diaries)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun saveDiary(diary: DiaryEntity): Result<DiaryEntity> {
         return try {
             val timestamp = Date().time

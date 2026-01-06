@@ -13,4 +13,5 @@ interface NoteRepository {
     suspend fun  updateNote(note : NoteEntity): Result<Unit>
     suspend fun  deleteNote(noteId: String): Result<Unit>
     suspend fun syncNotes(userId: String, lastSyncTimestamp: Long): Result<Unit>
+    suspend fun syncFromRemote(userId: String): Result<Unit>
 }

@@ -13,10 +13,10 @@ interface NoteDao {
     @Update
     suspend fun updateNote(note: NoteEntity)
 
-    @Query("SELECT * FROM notes WHERE userId = :userId AND isDeleted = 0 ORDER BY createdAt DESC")
+    @Query("SELECT * FROM notes WHERE userId = :userId AND isDeleted = 0 AND pendingDelete = 0 ORDER BY createdAt DESC")
     suspend fun getNotes(userId: String): List<NoteEntity>
 
-    @Query("SELECT * FROM notes WHERE userId = :userId AND isDeleted = 0 ORDER BY createdAt DESC")
+    @Query("SELECT * FROM notes WHERE userId = :userId AND isDeleted = 0 AND pendingDelete = 0 ORDER BY createdAt DESC")
     fun getNotesFlow(userId: String): Flow<List<NoteEntity>>
 
     @Query("SELECT * FROM notes ORDER BY createdAt DESC")

@@ -19,14 +19,37 @@ class DiaryRepositoryImpl @Inject constructor(
     private val syncManager: SyncManager
 ) : DiaryRepository {
 
+    // Cache last sync time to avoid too frequent syncs
+    private var lastSyncTime = 0L
+    private val syncIntervalMs = 30_000L // 30 seconds
+
+    private fun shouldSync(): Boolean {
+        val now = System.currentTimeMillis()
+        return (now - lastSyncTime) > syncIntervalMs
+    }
+
     override fun getDiaries(userId: String): Flow<List<DiaryEntity>> {
-        // Pure offline-first: only emit from local database
-        // Background sync via SyncWorker will keep data updated
-        return localDataSource.getDiariesFlow(userId)
-            .catch { exception ->
-                Log.e("DiaryRepository", "Error loading diaries", exception)
-                emit(emptyList())
+        return flow {
+            // Trigger sync from remote first if online and not synced recently
+            if (networkManager.isCurrentlyOnline() && shouldSync()) {
+                try {
+                    syncFromRemote(userId)
+                    lastSyncTime = System.currentTimeMillis()
+                    Log.d("DiaryRepository", "Synced diaries from Firebase before emitting")
+                } catch (e: Exception) {
+                    Log.e("DiaryRepository", "Failed to sync from remote, continuing with local data", e)
+                }
             }
+            
+            // Emit from local database (which now has updated data)
+            localDataSource.getDiariesFlow(userId)
+                .collect { diaries ->
+                    emit(diaries)
+                }
+        }.catch { exception ->
+            Log.e("DiaryRepository", "Error loading diaries", exception)
+            emit(emptyList())
+        }
     }
 
     override suspend fun getDiariesByDate(userId: String, date: Long): Flow<List<DiaryEntity>> {
@@ -94,6 +117,8 @@ class DiaryRepositoryImpl @Inject constructor(
             if (networkManager.isCurrentlyOnline()) {
                 val remoteResult = remoteDataSource.saveDiary(diary)
                 if (remoteResult.isSuccess) {
+                    // Reset sync cache to force refresh next time
+                    lastSyncTime = 0L
                     Result.success(diary)
                 } else {
                     // Keep in local, schedule sync for later
@@ -114,15 +139,27 @@ class DiaryRepositoryImpl @Inject constructor(
     override suspend fun updateDiary(diary: DiaryEntity): Result<Unit> {
         return try {
             // 1. Update local first
-            val updatedDiary = diary.copy(updatedAt = System.currentTimeMillis())
+            val updatedDiary = diary.copy(
+                updatedAt = System.currentTimeMillis(),
+                lastSyncTimestamp = 0L // Mark as pending sync
+            )
             localDataSource.updateDiary(updatedDiary)
 
-            // 2. Sync to remote
-            val remoteResult = remoteDataSource.saveDiary(updatedDiary)
-            if (remoteResult.isSuccess) {
-                Result.success(Unit)
+            // 2. Sync to remote only if online
+            if (networkManager.isCurrentlyOnline()) {
+                val remoteResult = remoteDataSource.saveDiary(updatedDiary)
+                if (remoteResult.isSuccess) {
+                    // Reset sync cache to force refresh next time
+                    lastSyncTime = 0L
+                    Result.success(Unit)
+                } else {
+                    // Keep local changes, schedule sync for later
+                    syncManager.scheduleSyncNow()
+                    Result.success(Unit)
+                }
             } else {
-                // Keep local changes even if remote fails
+                // Offline: schedule sync when network returns
+                syncManager.schedulePeriodicSync()
                 Result.success(Unit)
             }
         } catch (e: Exception) {
@@ -133,22 +170,38 @@ class DiaryRepositoryImpl @Inject constructor(
 
     override suspend fun deleteDiary(diaryId: String): Result<Unit> {
         return try {
-            // 1. Soft delete in local
+            // 1. Mark as pending delete in local
             val localDiary = localDataSource.getDiaryById(diaryId)
             if (localDiary != null) {
                 val deletedDiary = localDiary.copy(
-                    isDeleted = true,
+                    pendingDelete = true,
                     updatedAt = System.currentTimeMillis()
                 )
                 localDataSource.updateDiary(deletedDiary)
+                Log.d("DiaryRepository", "Marked diary as pending delete: $diaryId")
             }
 
-            // 2. Delete from remote
-            val remoteResult = remoteDataSource.deleteDiary(diaryId)
-            if (remoteResult.isSuccess) {
-                Result.success(Unit)
+            // 2. Try to delete from remote if online
+            if (networkManager.isCurrentlyOnline()) {
+                val remoteResult = remoteDataSource.deleteDiary(diaryId)
+                if (remoteResult.isSuccess) {
+                    // Successfully deleted from remote, now hard delete locally
+                    if (localDiary != null) {
+                        val fullyDeletedDiary = localDiary.copy(
+                            isDeleted = true,
+                            pendingDelete = false
+                        )
+                        localDataSource.updateDiary(fullyDeletedDiary)
+                    }
+                    Result.success(Unit)
+                } else {
+                    // Keep as pending delete, schedule sync
+                    syncManager.scheduleSyncNow()
+                    Result.success(Unit)
+                }
             } else {
-                // Keep local deletion even if remote fails
+                // Offline: keep as pending delete, schedule sync when network returns
+                syncManager.schedulePeriodicSync()
                 Result.success(Unit)
             }
         } catch (e: Exception) {
@@ -170,6 +223,58 @@ class DiaryRepositoryImpl @Inject constructor(
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e("DiaryRepository", "Error syncing diaries", e)
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun syncFromRemote(userId: String): Result<Unit> {
+        return try {
+            if (!networkManager.isCurrentlyOnline()) {
+                Log.d("DiaryRepository", "No network, skipping remote sync")
+                return Result.success(Unit)
+            }
+
+            // 1. Fetch all diaries from Firebase
+            val remoteResult = remoteDataSource.getDiaries(userId)
+            if (remoteResult.isFailure) {
+                Log.e("DiaryRepository", "Failed to fetch diaries from Firebase", remoteResult.exceptionOrNull())
+                return Result.failure(remoteResult.exceptionOrNull() ?: Exception("Unknown error"))
+            }
+
+            val remoteDiaries = remoteResult.getOrNull() ?: emptyList()
+            Log.d("DiaryRepository", "Fetched ${remoteDiaries.size} diaries from Firebase")
+
+            // 2. Get all local diaries
+            val localDiaries = localDataSource.getAllDiaries()
+            val userLocalDiaries = localDiaries.filter { it.userId == userId }
+            
+            // 3. Merge logic: Firebase is source of truth for synced data
+            remoteDiaries.forEach { remoteDiary ->
+                val localDiary = userLocalDiaries.find { it.id == remoteDiary.id }
+                
+                if (localDiary == null) {
+                    // New diary from Firebase - insert to local
+                    localDataSource.insertDiary(remoteDiary)
+                    Log.d("DiaryRepository", "Inserted new diary from Firebase: ${remoteDiary.id}")
+                } else {
+                    // Diary exists locally - check if we should update
+                    // Only update if remote is newer AND local doesn't have pending changes
+                    val hasLocalPendingChanges = localDiary.lastSyncTimestamp == 0L || localDiary.pendingDelete
+                    
+                    if (!hasLocalPendingChanges && remoteDiary.updatedAt > localDiary.updatedAt) {
+                        // Remote is newer and local has no pending changes - update local
+                        localDataSource.insertDiary(remoteDiary)
+                        Log.d("DiaryRepository", "Updated diary from Firebase: ${remoteDiary.id}")
+                    } else if (hasLocalPendingChanges) {
+                        Log.d("DiaryRepository", "Skipping update for diary ${remoteDiary.id} - has pending local changes")
+                    }
+                }
+            }
+
+            Log.d("DiaryRepository", "Sync from remote completed successfully")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("DiaryRepository", "Error syncing from remote", e)
             Result.failure(e)
         }
     }

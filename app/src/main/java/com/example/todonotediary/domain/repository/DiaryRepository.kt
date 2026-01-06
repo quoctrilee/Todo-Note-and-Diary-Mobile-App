@@ -12,4 +12,5 @@ interface DiaryRepository {
     suspend fun  updateDiary(diary: DiaryEntity): Result<Unit>
     suspend fun deleteDiary(diaryId: String): Result<Unit>
     suspend fun syncDiaries(userId: String, lastSyncTimestamp: Long): Result<Unit>
+    suspend fun syncFromRemote(userId: String): Result<Unit>
 }

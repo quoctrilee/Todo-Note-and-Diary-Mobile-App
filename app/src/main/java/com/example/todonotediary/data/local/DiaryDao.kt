@@ -13,10 +13,10 @@ interface DiaryDao {
     @Update
     suspend fun updateDiary(diary: DiaryEntity)
 
-    @Query("SELECT * FROM diaries WHERE userId = :userId AND isDeleted = 0 ORDER BY date DESC")
+    @Query("SELECT * FROM diaries WHERE userId = :userId AND isDeleted = 0 AND pendingDelete = 0 ORDER BY date DESC")
     suspend fun getDiaries(userId: String): List<DiaryEntity>
 
-    @Query("SELECT * FROM diaries WHERE userId = :userId AND isDeleted = 0 ORDER BY date DESC")
+    @Query("SELECT * FROM diaries WHERE userId = :userId AND isDeleted = 0 AND pendingDelete = 0 ORDER BY date DESC")
     fun getDiariesFlow(userId: String): Flow<List<DiaryEntity>>
 
     @Query("SELECT * FROM diaries ORDER BY date DESC")
