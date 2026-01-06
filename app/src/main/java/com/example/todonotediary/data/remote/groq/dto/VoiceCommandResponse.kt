@@ -10,9 +10,11 @@ data class VoiceCommandResponse(
     val title: String? = null,
     val description: String? = null,
     @SerializedName("start_at")
-    val startAt: Long? = null,
-    val deadline: Long? = null,
+    val startAt: String? = null, // Format: "dd/MM/yyyy HH:mm"
+    val deadline: String? = null, // Format: "dd/MM/yyyy HH:mm"
     @SerializedName("response_vi")
     val responseVi: String? = null,
-    val confidence: Float = 0.0f
+    val confidence: Float = 0.0f,
+    @SerializedName("query_filter")
+    val queryFilter: String? = null // "today" | "tomorrow" | "this_week" | "this_month" | "all"
 )

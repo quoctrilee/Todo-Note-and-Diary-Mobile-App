@@ -7,7 +7,8 @@ data class VoiceCommand(
     val intent: CommandIntent,
     val todoData: TodoData? = null,
     val responseText: String = "",
-    val confidence: Float = 0.0f
+    val confidence: Float = 0.0f,
+    val queryFilter: String? = null // "today" | "tomorrow" | "this_week" | "this_month" | "all"
 )
 
 /**
@@ -27,6 +28,5 @@ enum class CommandIntent {
     ADD_TODO,
     QUERY_TODOS,
     COMPLETE_TODO,
-    GENERAL_QUESTION,
-    UNKNOWN
+    GENERAL_QUESTION
 }

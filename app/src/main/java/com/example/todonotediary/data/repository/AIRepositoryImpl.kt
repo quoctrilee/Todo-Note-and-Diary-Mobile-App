@@ -10,6 +10,8 @@ import com.example.todonotediary.domain.repository.AIRepository
 import com.example.todonotediary.utils.GroqPromptBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Locale
 import javax.inject.Inject
 
 class AIRepositoryImpl @Inject constructor(
@@ -35,8 +37,9 @@ class AIRepositoryImpl @Inject constructor(
                     Log.d(TAG, "🤖 Groq Response: $response")
                     val parsed = groqClient.parseResponse(response, VoiceCommandResponse::class.java)
                     if (parsed != null) {
-                        Log.d(TAG, "📦 Parsed: intent=${parsed.intent}, title=${parsed.title}, startAt=${parsed.startAt}, deadline=${parsed.deadline}, responseVi=${parsed.responseVi}")
+                        Log.d(TAG, "📦 Parsed: intent=${parsed.intent}, title=${parsed.title}, startAt='${parsed.startAt}', deadline='${parsed.deadline}', responseVi=${parsed.responseVi}")
                         val voiceCommand = mapToVoiceCommand(parsed)
+                        Log.d(TAG, "✅ Mapped: startAtTimestamp=${voiceCommand.todoData?.startAt}, deadlineTimestamp=${voiceCommand.todoData?.deadline}")
                         Result.success(voiceCommand)
                     } else {
                         Log.e(TAG, "❌ Parse failed")
@@ -65,25 +68,64 @@ class AIRepositoryImpl @Inject constructor(
             "QUERY_TODOS" -> CommandIntent.QUERY_TODOS
             "COMPLETE_TODO" -> CommandIntent.COMPLETE_TODO
             "GENERAL_QUESTION" -> CommandIntent.GENERAL_QUESTION
-            else -> CommandIntent.UNKNOWN
+            else -> CommandIntent.GENERAL_QUESTION // Mặc định cho vào GENERAL_QUESTION nếu không rõ
         }
         
-        val todoData = if (intent == CommandIntent.ADD_TODO && response.title != null) {
-            TodoData(
-                title = response.title,
-                description = response.description,
-                startAt = response.startAt,
-                deadline = response.deadline
-            )
-        } else {
-            null
+        val todoData = when (intent) {
+            CommandIntent.ADD_TODO -> {
+                if (response.title != null) {
+                    TodoData(
+                        title = response.title,
+                        description = response.description,
+                        startAt = parseDateTimeToTimestamp(response.startAt),
+                        deadline = parseDateTimeToTimestamp(response.deadline)
+                    )
+                } else null
+            }
+            CommandIntent.COMPLETE_TODO -> {
+                if (response.title != null) {
+                    TodoData(
+                        title = response.title,
+                        description = response.description,
+                        startAt = null,
+                        deadline = null
+                    )
+                } else null
+            }
+            else -> null
         }
         
         return VoiceCommand(
             intent = intent,
             todoData = todoData,
-            responseText = response.responseVi ?: "Đã xử lý",
-            confidence = response.confidence
+            responseText = response.responseVi ?: "",
+            confidence = response.confidence,
+            queryFilter = response.queryFilter
         )
+    }
+    
+    /**
+     * Parse datetime string to timestamp (milliseconds)
+     * Format: "dd/MM/yyyy HH:mm"
+     * Đồng nhất với cách lưu thủ công: set second=0, millisecond=0
+     */
+    private fun parseDateTimeToTimestamp(dateTimeStr: String?): Long? {
+        if (dateTimeStr.isNullOrBlank()) return null
+        
+        return try {
+            val format = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale("vi", "VN"))
+            val date = format.parse(dateTimeStr) ?: return null
+            
+            // Đồng nhất với AddTodoScreen: set second=0, millisecond=0
+            val calendar = java.util.Calendar.getInstance()
+            calendar.time = date
+            calendar.set(java.util.Calendar.SECOND, 0)
+            calendar.set(java.util.Calendar.MILLISECOND, 0)
+            
+            calendar.timeInMillis
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Failed to parse datetime: $dateTimeStr", e)
+            null
+        }
     }
 }

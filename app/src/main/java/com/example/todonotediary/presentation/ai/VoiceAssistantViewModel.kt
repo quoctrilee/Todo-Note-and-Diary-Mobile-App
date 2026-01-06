@@ -241,20 +241,6 @@ class VoiceAssistantViewModel @Inject constructor(
                                     }
                                 }
                             }
-                            CommandIntent.UNKNOWN -> {
-                                _state.value = _state.value.copy(
-                                    status = VoiceStatus.ERROR,
-                                    errorMessage = "Xin lỗi, tôi chưa hiểu lệnh này",
-                                    isProcessing = false
-                                )
-                                
-                                ttsHelper.speak("Xin lỗi, tôi chưa hiểu lệnh này") {
-                                    viewModelScope.launch {
-                                        delay(1000)
-                                        handleDismiss()
-                                    }
-                                }
-                            }
                         }
                     },
                     onFailure = { error ->
