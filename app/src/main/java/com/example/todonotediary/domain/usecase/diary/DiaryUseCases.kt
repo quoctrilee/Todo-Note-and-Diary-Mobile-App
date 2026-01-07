@@ -8,5 +8,7 @@ data class DiaryUseCases(
     val deleteDiary: DeleteDiaryUseCase,
     val syncDiaries: SyncDiariesUseCase,
     val getDiariesByDateUseCase: GetDiariesByDateUseCase,
-    val getDiariesByTitleAndContentUseCase: GetDiariesByTitleAndContentUseCase
+    val getDiariesByTitleAndContentUseCase: GetDiariesByTitleAndContentUseCase,
+    val analyzeDiarySentiment: AnalyzeDiarySentimentUseCase,
+    val generateDiaryResponse: GenerateDiaryResponseUseCase
 )

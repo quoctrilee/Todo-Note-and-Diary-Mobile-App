@@ -62,6 +62,70 @@ class AIRepositoryImpl @Inject constructor(
         return Result.success("Tính năng truy vấn đang được phát triển")
     }
     
+    override suspend fun generateDiaryResponse(
+        content: String,
+        sentiment: com.example.todonotediary.domain.model.SentimentResult
+    ): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            Log.d(TAG, "🤖 Generating diary response for sentiment: ${sentiment.label} (${sentiment.score})")
+            
+            // Build context-aware prompt based on sentiment
+            val systemPrompt = buildDiaryResponsePrompt(sentiment)
+            val userMessage = "Nội dung nhật ký: \"$content\""
+            
+            val result = groqClient.chatCompletion(
+                systemPrompt = systemPrompt,
+                userMessage = userMessage,
+                useJsonFormat = false  // Get natural text response
+            )
+            
+            result.fold(
+                onSuccess = { groqResponse ->
+                    // Extract message content from GroqChatResponse
+                    val messageContent = groqResponse.choices.firstOrNull()?.message?.content
+                    if (messageContent != null) {
+                        Log.d(TAG, "✅ Generated response: ${messageContent.take(100)}...")
+                        Result.success(messageContent)
+                    } else {
+                        Log.e(TAG, "❌ Empty response from Groq")
+                        Result.failure(Exception("Không nhận được phản hồi từ AI"))
+                    }
+                },
+                onFailure = { error ->
+                    Log.e(TAG, "❌ Failed to generate response: ${error.message}")
+                    Result.failure(error)
+                }
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Exception generating diary response: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+    
+    /**
+     * Build sentiment-aware prompt for diary response
+     */
+    private fun buildDiaryResponsePrompt(sentiment: com.example.todonotediary.domain.model.SentimentResult): String {
+        val emotionContext = when {
+            sentiment.score < 0.3 -> "Người dùng đang có cảm xúc tiêu cực mạnh (${sentiment.label})"
+            sentiment.score < 0.5 -> "Người dùng đang cảm thấy lo lắng hoặc buồn nhẹ (${sentiment.label})"
+            sentiment.score < 0.7 -> "Người dùng có cảm xúc trung tính hoặc bình thường (${sentiment.label})"
+            sentiment.score < 0.85 -> "Người dùng đang có cảm xúc tích cực (${sentiment.label})"
+            else -> "Người dùng đang rất vui vẻ và hạnh phúc (${sentiment.label})"
+        }
+        
+        return """
+Bạn là một người bạn thân thiết, tử tế và thấu hiểu. Người dùng vừa viết nhật ký với tâm trạng: $emotionContext (điểm cảm xúc: ${sentiment.score}).
+
+Hãy đưa ra phản hồi ngắn gọn (2-3 câu) phù hợp với tâm trạng của họ:
+- Nếu họ buồn/lo âu: An ủi, động viên, đưa ra lời khuyên tích cực
+- Nếu họ vui vẻ: Chia sẻ niềm vui, khích lệ tiếp tục
+- Nếu họ bình thường: Gửi lời chúc tốt đẹp
+
+Sử dụng emoji phù hợp, giọng văn thân thiện, ấm áp. Viết bằng tiếng Việt.
+        """.trimIndent()
+    }
+    
     private fun mapToVoiceCommand(response: VoiceCommandResponse): VoiceCommand {
         val intent = when (response.intent.uppercase()) {
             "ADD_TODO" -> CommandIntent.ADD_TODO

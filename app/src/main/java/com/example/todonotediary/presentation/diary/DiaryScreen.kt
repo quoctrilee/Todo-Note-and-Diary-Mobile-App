@@ -64,7 +64,9 @@ fun DiaryScreen(
             DiaryHeader(
                 hasDateFilter = uiState.selectedDate != null,
                 onClearDateFilter = { viewModel.clearDateFilter() },
-                onCalendarClick = { viewModel.toggleCalendarVisibility() }
+                onCalendarClick = { viewModel.toggleCalendarVisibility() },
+                sentimentAnalysisEnabled = uiState.sentimentAnalysisEnabled,
+                onSentimentToggle = { viewModel.toggleSentimentAnalysis(it) }
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -152,36 +154,91 @@ fun DiaryScreen(
 fun DiaryHeader(
     hasDateFilter: Boolean = false,
     onClearDateFilter: () -> Unit = {},
-    onCalendarClick: () -> Unit = {}
+    onCalendarClick: () -> Unit = {},
+    sentimentAnalysisEnabled: Boolean = false,
+    onSentimentToggle: (Boolean) -> Unit = {}
 ) {
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
+            .background(Color.White)
             .padding(16.dp)
-            .background(Color.White),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(
-            text = "My Diaries",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "My Diaries",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (hasDateFilter) {
-                IconButton(onClick = onClearDateFilter) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (hasDateFilter) {
+                    IconButton(onClick = onClearDateFilter) {
+                        Icon(
+                            imageVector = Icons.Default.Clear,
+                            contentDescription = "Clear date filter"
+                        )
+                    }
+                }
+
+                IconButton(onClick = onCalendarClick) {
                     Icon(
-                        imageVector = Icons.Default.Clear,
-                        contentDescription = "Clear date filter"
+                        imageVector = Icons.Default.CalendarToday,
+                        contentDescription = "Calendar"
                     )
                 }
             }
-
-            IconButton(onClick = onCalendarClick) {
-                Icon(
-                    imageVector = Icons.Default.CalendarToday,
-                    contentDescription = "Calendar"
+        }
+        
+        // Sentiment Analysis Toggle
+        Spacer(modifier = Modifier.height(8.dp))
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Psychology,
+                        contentDescription = "AI Analysis",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text(
+                            text = "AI Sentiment Analysis",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Nhận phản hồi từ AI sau khi viết nhật ký",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+                
+                Switch(
+                    checked = sentimentAnalysisEnabled,
+                    onCheckedChange = onSentimentToggle,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.primary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer
+                    )
                 )
             }
         }

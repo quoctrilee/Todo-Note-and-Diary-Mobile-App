@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.activity.compose.BackHandler
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -55,6 +56,10 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import kotlinx.coroutines.flow.collectLatest
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import com.example.todonotediary.domain.model.DiaryResponse
+import com.example.todonotediary.presentation.diary.components.DiaryResponseDialog
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -68,12 +73,17 @@ fun AddDiaryScreen(
 ) {
     val context = LocalContext.current
     var showDatePicker by remember { mutableStateOf(false) }
+    var diaryResponseToShow by remember { mutableStateOf<DiaryResponse?>(null) }
     val state = viewModel.state
     val datePickerState = rememberDatePickerState(initialSelectedDateMillis = state.selectedDate)
     val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
     val formattedDate = dateFormat.format(Date(state.selectedDate))
 
     val moodOptions = listOf("happy", "sad", "excited", "calm", "frustrated", "neutral")
+    
+    // Track navigation state
+    var shouldNavigateBack by remember { mutableStateOf(false) }
+    var diaryJustSaved by remember { mutableStateOf(false) }
 
     // Collect UI events
     LaunchedEffect(key1 = true) {
@@ -81,13 +91,50 @@ fun AddDiaryScreen(
             when (event) {
                 is UiEvent.SaveDiarySuccess -> {
                     Toast.makeText(context, "Diary saved successfully", Toast.LENGTH_SHORT).show()
-                    onNavigateBack()
+                    diaryJustSaved = true
+                    // Don't navigate back here - wait for sentiment or navigate in effect below
                 }
                 is UiEvent.ShowError -> {
                     Toast.makeText(context, event.message, Toast.LENGTH_LONG).show()
                 }
+                is UiEvent.ShowDiaryResponse -> {
+                    // Show dialog - don't navigate back yet
+                    diaryResponseToShow = event.response
+                }
             }
         }
+    }
+    
+    // Handle navigation after save
+    LaunchedEffect(diaryJustSaved, state.isAnalyzingSentiment, diaryResponseToShow) {
+        if (diaryJustSaved && !state.isAnalyzingSentiment && diaryResponseToShow == null) {
+            // Saved, no sentiment analysis, and no dialog showing - navigate back
+            shouldNavigateBack = true
+        }
+    }
+    
+    // Execute navigation
+    LaunchedEffect(shouldNavigateBack) {
+        if (shouldNavigateBack) {
+            onNavigateBack()
+        }
+    }
+    
+    // Prevent back navigation while analyzing sentiment or showing dialog
+    BackHandler(enabled = state.isAnalyzingSentiment || diaryResponseToShow != null) {
+        // Do nothing - prevent back press during analysis or when dialog is shown
+    }
+    
+    // Show Diary Response Dialog
+    diaryResponseToShow?.let { response ->
+        DiaryResponseDialog(
+            diaryResponse = response,
+            onDismiss = {
+                diaryResponseToShow = null
+                diaryJustSaved = false  // Reset to prevent double navigation
+                onNavigateBack()
+            }
+        )
     }
 
     Scaffold(
