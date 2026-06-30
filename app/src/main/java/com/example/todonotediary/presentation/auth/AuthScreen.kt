@@ -28,9 +28,11 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.ui.res.painterResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.example.todonotediary.presentation.navigation.Screen
+import com.example.todonotediary.presentation.navigation.AuthRoute
+import com.example.todonotediary.presentation.navigation.MainScreenRoute
+import com.example.todonotediary.presentation.navigation.RegisterRoute
 import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
 import com.google.android.gms.common.api.ApiException
 
 @Composable
@@ -56,17 +58,8 @@ fun AuthScreen(
     val buttonColor = Color(0xFF4A7186) // Màu nút
     val accentColor = Color(0xFFEC9A73) // Màu nhấn
 
-    // Cấu hình Google Sign-In
-    val gso = remember {
-        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken("712471685484-jadone5ck2fqss4s7k9qeisvin4s2mi8.apps.googleusercontent.com")
-            .requestEmail()
-            .build()
-    }
-
-    val googleSignInClient = remember {
-        GoogleSignIn.getClient(context, gso)
-    }
+    // Google Sign-In được tiêm từ Hilt thông qua ViewModel
+    val googleSignInClient = viewModel.googleSignInClient
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -77,8 +70,18 @@ fun AuthScreen(
             account?.idToken?.let { token ->
                 viewModel.signInWithGoogle(token)
             }
-        } catch (e: Exception) {
-            Toast.makeText(context, "Login failed: ${e.message}", Toast.LENGTH_SHORT).show()
+        } catch (e: ApiException) {
+            if (e.statusCode == GoogleSignInStatusCodes.SIGN_IN_CANCELLED) {
+                // 🎯 XỬ LÝ LỖI 12501: Người dùng chủ động hủy.
+                // Im lặng, không hiện Toast lỗi.
+                // Gọi hàm tắt vòng xoay Loading (Nếu ViewModel của bạn đang quản lý isLoading)
+                // viewModel.resetStates()
+            } else {
+                // Các lỗi Google thực sự khác (Cấu hình sai SHA-1, mất mạng...)
+                Toast.makeText(context, "Google Sign-In failed (Code: ${e.statusCode})", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e : Exception) {
+            Toast.makeText(context, "Google Sign-In failed: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -90,17 +93,16 @@ fun AuthScreen(
             }
             is GoogleSignInState.Success -> {
                 isLoading = false
-                navController.navigate(Screen.MainScreen.route) {
-                    popUpTo(Screen.Auth.route) { inclusive = true }
+                navController.navigate(MainScreenRoute) {
+                    popUpTo<AuthRoute> { inclusive = true }
                 }
                 viewModel.resetStates()
             }
             is GoogleSignInState.NeedRegistration -> {
                 isLoading = false
-                // Người dùng chưa tồn tại, chuyển hướng đến màn hình Register và truyền email
                 val userEmail = (googleSignInState as GoogleSignInState.NeedRegistration).email
-                navController.navigate("${Screen.Register.route}?email=$userEmail") {
-                    popUpTo(Screen.Auth.route) { inclusive = false }
+                navController.navigate(RegisterRoute(email = userEmail)) {
+                    popUpTo<AuthRoute> { inclusive = false }
                 }
                 viewModel.resetStates()
             }
@@ -125,9 +127,8 @@ fun AuthScreen(
             }
             is EmailSignInState.Success -> {
                 isLoading = false
-                // Chuyển hướng đến màn hình chính nếu đăng nhập thành công
-                navController.navigate(Screen.MainScreen.route) {
-                    popUpTo(Screen.Auth.route) { inclusive = true }
+                navController.navigate(MainScreenRoute) {
+                    popUpTo<AuthRoute> { inclusive = true }
                 }
                 viewModel.resetStates()
             }
@@ -148,8 +149,8 @@ fun AuthScreen(
     // Check if already authenticated
     LaunchedEffect(authState) {
         if (authState is AuthState.Authenticated) {
-            navController.navigate(Screen.MainScreen.route) {
-                popUpTo(Screen.Auth.route) { inclusive = true }
+            navController.navigate(MainScreenRoute) {
+                popUpTo<AuthRoute> { inclusive = true }
             }
         }
     }

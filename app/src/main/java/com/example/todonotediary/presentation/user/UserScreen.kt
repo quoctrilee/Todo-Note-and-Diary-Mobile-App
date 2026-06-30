@@ -30,7 +30,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.todonotediary.R
 import com.example.todonotediary.presentation.MainViewModel
-import com.example.todonotediary.presentation.navigation.Screen
+import com.example.todonotediary.presentation.navigation.AuthRoute
+import com.example.todonotediary.presentation.navigation.MainScreenRoute
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -108,8 +109,8 @@ fun UserScreen(
                     UserOptions(
                         onLogoutClick = {
                             viewModel.signOut()
-                            navController.navigate(Screen.Auth.route) {
-                                popUpTo("main") { inclusive = true }
+                            navController.navigate(AuthRoute) {
+                                popUpTo<MainScreenRoute> { inclusive = true }
                             }
                         }
                     )

@@ -11,7 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.todonotediary.presentation.navigation.Screen
+import com.example.todonotediary.presentation.navigation.AuthRoute
+import com.example.todonotediary.presentation.navigation.SplashRoute
 import kotlinx.coroutines.delay
 
 @Composable
@@ -19,18 +20,18 @@ fun SplashScreen(navController: NavController) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White), // Thiết lập nền trắng
+            .background(Color.White),
         contentAlignment = Alignment.Center
     ) {
-                Text(
-                    text = "TodoNoteDiary",
-                    fontSize = 24.sp // Sử dụng sp cho fontSize thay vì dp
-                )
-            LaunchedEffect(key1 = true) {
-                delay(2000) // 2 seconds delay
-                navController.navigate(Screen.Auth.route) {
-                    popUpTo(Screen.Splash.route) { inclusive = true }
-                }
+        Text(
+            text = "TodoNoteDiary",
+            fontSize = 24.sp
+        )
+        LaunchedEffect(key1 = true) {
+            delay(2000)
+            navController.navigate(AuthRoute) {
+                popUpTo<SplashRoute> { inclusive = true }
             }
+        }
     }
 }

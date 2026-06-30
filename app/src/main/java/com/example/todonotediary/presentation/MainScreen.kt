@@ -21,7 +21,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -34,7 +33,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -43,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -51,11 +50,15 @@ import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.todonotediary.R
 import com.example.todonotediary.presentation.diary.DiaryScreen
-import com.example.todonotediary.presentation.navigation.Screen
+import com.example.todonotediary.presentation.navigation.AddDiaryRoute
+import com.example.todonotediary.presentation.navigation.AddNoteRoute
+import com.example.todonotediary.presentation.navigation.AddTodoRoute
+import com.example.todonotediary.presentation.navigation.DiaryRoute
+import com.example.todonotediary.presentation.navigation.NoteRoute
+import com.example.todonotediary.presentation.navigation.TodoRoute
+import com.example.todonotediary.presentation.navigation.UserRoute
 import com.example.todonotediary.presentation.note.NoteScreen
 import com.example.todonotediary.presentation.todo.TodoScreen
-import com.example.todonotediary.presentation.user.UserScreen
-import com.google.firebase.auth.FirebaseUser
 
 @Composable
 fun MainScreen(
@@ -84,14 +87,14 @@ fun MainScreen(
         },
         bottomBar = { BottomNavigationBar(navController = innerNavController) }
     ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding) .background(Color.White) ) {
+        Box(modifier = Modifier.padding(innerPadding).background(Color.White)) {
             NavHost(
                 navController = innerNavController,
-                startDestination = Screen.Todo.route
+                startDestination = TodoRoute
             ) {
-                composable(Screen.Todo.route) { TodoScreen() }
-                composable(Screen.Note.route) { NoteScreen() }
-                composable(Screen.Diary.route) { DiaryScreen() }
+                composable<TodoRoute> { TodoScreen() }
+                composable<NoteRoute> { NoteScreen() }
+                composable<DiaryRoute> { DiaryScreen() }
             }
         }
     }
@@ -127,7 +130,7 @@ fun TopNavigationBar( avatarUrl: String?,
                 modifier = Modifier
                     .size(46.dp)
                     .clickable {
-                        parentNavController.navigate(Screen.User.route) {
+                        parentNavController.navigate(UserRoute) {
                             popUpTo(parentNavController.graph.startDestinationId)
                             launchSingleTop = true
                         }
@@ -142,7 +145,7 @@ fun TopNavigationBar( avatarUrl: String?,
                         .size(46.dp)
                         .clip(CircleShape)
                         .clickable {
-                            parentNavController.navigate(Screen.User.route) {
+                            parentNavController.navigate(UserRoute) {
                                 popUpTo(parentNavController.graph.startDestinationId)
                                 launchSingleTop = true
                             }
@@ -172,25 +175,22 @@ fun TopNavigationBar( avatarUrl: String?,
 
             Spacer(modifier = Modifier.width(12.dp))
             val navBackStackEntry by navController.currentBackStackEntryAsState()
-            val currentRoute = navBackStackEntry?.destination?.route
+            val currentDestination = navBackStackEntry?.destination
 
             // Nút tạo mới với thiết kế hiện đại hơn
             Surface(
                 modifier = Modifier
                     .size(46.dp)
                     .clickable {
-                        when (currentRoute) {
-                            Screen.Todo.route -> {
-                                // Sử dụng parentNavController để điều hướng đến AddTodo
-                                parentNavController.navigate(Screen.AddTodo.route)
+                        when {
+                            currentDestination?.hasRoute<TodoRoute>() == true -> {
+                                parentNavController.navigate(AddTodoRoute)
                             }
-                            Screen.Note.route -> {
-                                // Điều hướng tới màn hình tạo Note mới
-                                parentNavController.navigate(Screen.AddNote.route)
+                            currentDestination?.hasRoute<NoteRoute>() == true -> {
+                                parentNavController.navigate(AddNoteRoute)
                             }
-                            Screen.Diary.route -> {
-                                // Điều hướng tới màn hình tạo Diary mới
-                                parentNavController.navigate(Screen.AddDiary.route)
+                            currentDestination?.hasRoute<DiaryRoute>() == true -> {
+                                parentNavController.navigate(AddDiaryRoute)
                             }
                         }
                     },
@@ -216,9 +216,9 @@ fun TopNavigationBar( avatarUrl: String?,
 @Composable
 fun BottomNavigationBar(navController: NavHostController) {
     val items = listOf(
-        NavigationItem("Todo", Icons.Default.DateRange, Screen.Todo.route),
-        NavigationItem("Notes", Icons.Default.Create, Screen.Note.route),
-        NavigationItem("Diary", Icons.Default.Book, Screen.Diary.route)
+        NavigationItem("Todo", Icons.Default.DateRange, TodoRoute),
+        NavigationItem("Notes", Icons.Default.Create, NoteRoute),
+        NavigationItem("Diary", Icons.Default.Book, DiaryRoute)
     )
 
     Surface(
@@ -236,10 +236,10 @@ fun BottomNavigationBar(navController: NavHostController) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             val navBackStackEntry by navController.currentBackStackEntryAsState()
-            val currentRoute = navBackStackEntry?.destination?.route
+            val currentDestination = navBackStackEntry?.destination
 
             items.forEach { item ->
-                val selected = currentRoute == item.route
+                val selected = currentDestination?.hasRoute(item.route::class) == true
 
                 Box(
                     modifier = Modifier

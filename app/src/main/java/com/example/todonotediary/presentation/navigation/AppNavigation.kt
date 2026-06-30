@@ -1,11 +1,10 @@
 package com.example.todonotediary.presentation.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
+import androidx.navigation.toRoute
 import com.example.todonotediary.presentation.MainScreenWithNavigation
 import com.example.todonotediary.presentation.auth.AuthScreen
 import com.example.todonotediary.presentation.auth.RegisterScreen
@@ -21,46 +20,51 @@ fun AppNavigation() {
 
     NavHost(
         navController = navController,
-        startDestination = Screen.Splash.route
+        startDestination = SplashRoute
     ) {
-        composable(Screen.Splash.route) {
+        composable<SplashRoute> {
             SplashScreen(navController = navController)
         }
-        composable(Screen.Auth.route) {
+
+        composable<AuthRoute> {
             AuthScreen(navController = navController)
         }
-        composable(
-            route = "${Screen.Register.route}?email={email}",
-            arguments = listOf(
-                navArgument("email") {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
-                }
+
+        composable<RegisterRoute> { backStackEntry ->
+            val registerRoute: RegisterRoute = backStackEntry.toRoute()
+            RegisterScreen(
+                navController = navController,
+                email = registerRoute.email
             )
-        ) { backStackEntry ->
-            val email = backStackEntry.arguments?.getString("email")
-            RegisterScreen(navController = navController, email = email)
         }
-        composable(Screen.MainScreen.route) {
+
+        composable<MainScreenRoute> {
             MainScreenWithNavigation(navController = navController)
         }
 
-        composable(Screen.AddTodo.route) {
-            AddTodoScreen(navController = navController, onNavigateBack = { navController.popBackStack() })
+        composable<AddTodoRoute> {
+            AddTodoScreen(
+                navController = navController,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
-        composable(Screen.AddNote.route) {
-            AddNoteScreen(navController = navController, onNavigateBack = { navController.popBackStack() })
+        composable<AddNoteRoute> {
+            AddNoteScreen(
+                navController = navController,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
-        composable(Screen.AddDiary.route) {
-            AddDiaryScreen(navController = navController, onNavigateBack = { navController.popBackStack() })
+        composable<AddDiaryRoute> {
+            AddDiaryScreen(
+                navController = navController,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
-        composable(Screen.User.route) {
+        composable<UserRoute> {
             UserScreen(navController = navController)
         }
-
     }
 }

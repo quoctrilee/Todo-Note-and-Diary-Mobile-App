@@ -1,15 +1,25 @@
 *.iml
 .gradle
 /local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+.idea/
+/.idea/
+.kotlin/
 .DS_Store
 /build
 /captures
 .externalNativeBuild
 .cxx
 local.properties
+
+# Google Services Config
+google-services.json
+
+# Keystores & Signing
+*.jks
+*.keystore
+*.pepk
+
+# Logs & temp
+*.log
+.navigation/
+captures/

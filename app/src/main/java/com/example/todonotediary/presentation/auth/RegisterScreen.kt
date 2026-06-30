@@ -24,7 +24,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.example.todonotediary.presentation.navigation.Screen
+import com.example.todonotediary.presentation.navigation.AuthRoute
+import com.example.todonotediary.presentation.navigation.MainScreenRoute
+import com.example.todonotediary.presentation.navigation.RegisterRoute
 
 @Composable
 fun RegisterScreen(
@@ -60,9 +62,8 @@ fun RegisterScreen(
             is RegisterState.Success -> {
                 isLoading = false
                 Toast.makeText(context, "Đăng ký thành công", Toast.LENGTH_SHORT).show()
-                // Chuyển hướng đến màn hình chính
-                navController.navigate(Screen.MainScreen.route) {
-                    popUpTo(Screen.Auth.route) { inclusive = true }
+                navController.navigate(MainScreenRoute) {
+                    popUpTo<AuthRoute> { inclusive = true }
                 }
                 viewModel.resetStates()
             }
@@ -284,8 +285,8 @@ fun RegisterScreen(
                         )
                         TextButton(
                             onClick = {
-                                navController.navigate(Screen.Auth.route) {
-                                    popUpTo(Screen.Register.route) { inclusive = true }
+                                navController.navigate(AuthRoute) {
+                                    popUpTo<RegisterRoute> { inclusive = true }
                                 }
                             },
                             modifier = Modifier.alignByBaseline() // Giúp căn chỉnh theo baseline chữ

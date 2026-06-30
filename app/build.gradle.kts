@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt)
     alias(libs.plugins.google.services)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -34,6 +35,12 @@ android {
             "String",
             "GROQ_API_KEY",
             "\"${properties.getProperty("groq.api.key", "")}\""
+        )
+        
+        buildConfigField(
+            "String",
+            "GOOGLE_WEB_CLIENT_ID",
+            "\"${properties.getProperty("google.web.client.id", "")}\""
         )
     }
 
@@ -78,6 +85,7 @@ dependencies {
 
     // Navigation
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.kotlinx.serialization.json)
 
     // Room
     implementation(libs.androidx.room.runtime)
@@ -94,6 +102,8 @@ dependencies {
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
+    // Fix gRPC ART crash trên emulator: cung cấp transport layer rõ ràng cho Firestore
+    implementation("io.grpc:grpc-okhttp:1.62.2")
 
     implementation(libs.material.icons.extended)
     implementation(libs.google.auth)
