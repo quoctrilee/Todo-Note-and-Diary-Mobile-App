@@ -9,7 +9,7 @@
 
 ---
 
-## 🚀 Điểm Nhấn Kỹ Thuật (Cho Nhà Tuyển Dụng)
+## 🚀 Điểm Nhấn Kỹ Thuật 
 
 Dự án được xây dựng dựa trên các tiêu chuẩn phát triển Android hiện đại, tập trung vào tính đóng gói, dễ bảo trì và khả năng mở rộng:
 
