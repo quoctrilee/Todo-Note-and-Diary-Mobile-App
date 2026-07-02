@@ -1,13 +1,11 @@
 package com.example.todonotediary.presentation.auth
 
-import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,12 +23,12 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.ui.res.painterResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.todonotediary.presentation.navigation.AuthRoute
 import com.example.todonotediary.presentation.navigation.MainScreenRoute
 import com.example.todonotediary.presentation.navigation.RegisterRoute
+import com.example.todonotediary.presentation.splash.SplashUI
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
 import com.google.android.gms.common.api.ApiException
@@ -44,23 +42,19 @@ fun AuthScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(false) }
 
-    // States from ViewModel
-    val googleSignInState by viewModel.googleSignInState.collectAsState()
-    val emailSignInState by viewModel.emailSignInState.collectAsState()
-    val authState by viewModel.authState.collectAsState()
+    // Lắng nghe trạng thái UI duy nhất từ ViewModel
+    val uiState by viewModel.uiState.collectAsState()
 
-    // Định nghĩa màu sắc nhẹ nhàng
-    val primaryColor = Color(0xFF6B8E9B) // Màu xanh nhạt
-    val backgroundColor = Color(0xFFF8F9FA) // Màu nền nhẹ
-    val textColor = Color(0xFF2C3E50) // Màu chữ
-    val buttonColor = Color(0xFF4A7186) // Màu nút
-    val accentColor = Color(0xFFEC9A73) // Màu nhấn
+    // Bảng màu chủ đạo nhẹ nhàng
+    val primaryColor = Color(0xFF6B8E9B)
+    val textColor = Color(0xFF2C3E50)
+    val buttonColor = Color(0xFF4A7186)
+    val accentColor = Color(0xFFEC9A73)
 
-    // Google Sign-In được tiêm từ Hilt thông qua ViewModel
     val googleSignInClient = viewModel.googleSignInClient
 
+    // Bộ launcher xử lý kết quả trả về từ Google SDK
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -71,13 +65,7 @@ fun AuthScreen(
                 viewModel.signInWithGoogle(token)
             }
         } catch (e: ApiException) {
-            if (e.statusCode == GoogleSignInStatusCodes.SIGN_IN_CANCELLED) {
-                // 🎯 XỬ LÝ LỖI 12501: Người dùng chủ động hủy.
-                // Im lặng, không hiện Toast lỗi.
-                // Gọi hàm tắt vòng xoay Loading (Nếu ViewModel của bạn đang quản lý isLoading)
-                // viewModel.resetStates()
-            } else {
-                // Các lỗi Google thực sự khác (Cấu hình sai SHA-1, mất mạng...)
+            if (e.statusCode != GoogleSignInStatusCodes.SIGN_IN_CANCELLED) {
                 Toast.makeText(context, "Google Sign-In failed (Code: ${e.statusCode})", Toast.LENGTH_SHORT).show()
             }
         } catch (e : Exception) {
@@ -85,96 +73,44 @@ fun AuthScreen(
         }
     }
 
-    // Handle state changes
-    LaunchedEffect(googleSignInState) {
-        when (googleSignInState) {
-            is GoogleSignInState.Loading -> {
-                isLoading = true
-            }
-            is GoogleSignInState.Success -> {
-                isLoading = false
+    // Quản lý các hiệu ứng phụ (Side-Effects) như chuyển màn hình hoặc hiện thông báo lỗi
+    LaunchedEffect(uiState) {
+        when (uiState) {
+            is AuthUiState.Authenticated -> {
                 navController.navigate(MainScreenRoute) {
                     popUpTo<AuthRoute> { inclusive = true }
                 }
-                viewModel.resetStates()
             }
-            is GoogleSignInState.NeedRegistration -> {
-                isLoading = false
-                val userEmail = (googleSignInState as GoogleSignInState.NeedRegistration).email
+            is AuthUiState.NeedRegistration -> {
+                val userEmail = (uiState as AuthUiState.NeedRegistration).email
                 navController.navigate(RegisterRoute(email = userEmail)) {
                     popUpTo<AuthRoute> { inclusive = false }
                 }
-                viewModel.resetStates()
             }
-            is GoogleSignInState.Error -> {
-                isLoading = false
-                Toast.makeText(
-                    context,
-                    (googleSignInState as GoogleSignInState.Error).message,
-                    Toast.LENGTH_SHORT
-                ).show()
+            is AuthUiState.Error -> {
+                Toast.makeText(context, (uiState as AuthUiState.Error).message, Toast.LENGTH_SHORT).show()
             }
-            else -> {
-                isLoading = false
-            }
+            else -> {}
         }
     }
 
-    LaunchedEffect(emailSignInState) {
-        when (emailSignInState) {
-            is EmailSignInState.Loading -> {
-                isLoading = true
-            }
-            is EmailSignInState.Success -> {
-                isLoading = false
-                navController.navigate(MainScreenRoute) {
-                    popUpTo<AuthRoute> { inclusive = true }
-                }
-                viewModel.resetStates()
-            }
-            is EmailSignInState.Error -> {
-                isLoading = false
-                Toast.makeText(
-                    context,
-                    (emailSignInState as EmailSignInState.Error).message,
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-            else -> {
-                isLoading = false
-            }
-        }
-    }
-
-    // Check if already authenticated
-    LaunchedEffect(authState) {
-        if (authState is AuthState.Authenticated) {
-            navController.navigate(MainScreenRoute) {
-                popUpTo<AuthRoute> { inclusive = true }
-            }
-        }
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .padding(top = 100.dp)
-            .padding(bottom = 24.dp),
-        contentAlignment = Alignment.TopCenter
-    ) {
-        if (isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.align(Alignment.Center),
-                color = primaryColor
-            )
-        } else {
+    if (uiState is AuthUiState.Loading || uiState is AuthUiState.Authenticated) {
+        SplashUI(showProgress = true)
+    } else {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+                .padding(top = 100.dp)
+                .padding(bottom = 24.dp),
+            contentAlignment = Alignment.TopCenter
+        ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(20.dp),
                 modifier = Modifier.fillMaxWidth(0.9f)
             ) {
-                // Title "Welcome"
+                // Tiêu đề chào mừng
                 Text(
                     text = "Welcome",
                     color = primaryColor,
@@ -184,7 +120,7 @@ fun AuthScreen(
                     modifier = Modifier.padding(bottom = 32.dp)
                 )
 
-                // Email TextField
+                // Ô nhập Email
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
@@ -207,7 +143,7 @@ fun AuthScreen(
                     )
                 )
 
-                // Password TextField
+                // Ô nhập Mật khẩu
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
@@ -240,7 +176,7 @@ fun AuthScreen(
                     )
                 )
 
-                // Forgot Password
+                // Nút Quên mật khẩu
                 TextButton(
                     onClick = { /* Xử lý quên mật khẩu */ },
                     modifier = Modifier.align(Alignment.End)
@@ -252,11 +188,9 @@ fun AuthScreen(
                     )
                 }
 
-                // Login Button
+                // Nút Đăng nhập bằng Email
                 Button(
-                    onClick = {
-                        viewModel.loginWithEmail(email, password)
-                    },
+                    onClick = { viewModel.loginWithEmail(email, password) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
@@ -270,7 +204,7 @@ fun AuthScreen(
                     )
                 }
 
-                // Divider với text "hoặc"
+                // Thanh phân tách đường kẻ "Or"
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -296,7 +230,7 @@ fun AuthScreen(
                     )
                 }
 
-                // Google Login Button
+                // Nút Đăng nhập bằng Google
                 OutlinedButton(
                     onClick = {
                         val signInIntent = googleSignInClient.signInIntent
@@ -306,20 +240,16 @@ fun AuthScreen(
                         .fillMaxWidth()
                         .height(56.dp)
                         .clip(RoundedCornerShape(28.dp)),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = textColor
-                    )
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = textColor)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // Thông thường bạn sẽ sử dụng painterResource cho hình ảnh Google
-                        // Ở đây tạm sử dụng Circle thay thế
                         Surface(
                             modifier = Modifier.size(24.dp),
                             shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFFDB4437) // Màu đỏ của Google
+                            color = Color(0xFFDB4437)
                         ) {
                             Text(
                                 text = "G",

@@ -17,18 +17,8 @@ class AuthViewModel @Inject constructor(
     private val authUseCases: AuthUseCases,
     val googleSignInClient: GoogleSignInClient
 ) : ViewModel() {
-
-    private val _authState = MutableStateFlow<AuthState>(AuthState.Initial)
-    val authState: StateFlow<AuthState> = _authState.asStateFlow()
-
-    private val _googleSignInState = MutableStateFlow<GoogleSignInState>(GoogleSignInState.Initial)
-    val googleSignInState: StateFlow<GoogleSignInState> = _googleSignInState.asStateFlow()
-
-    private val _emailSignInState = MutableStateFlow<EmailSignInState>(EmailSignInState.Initial)
-    val emailSignInState: StateFlow<EmailSignInState> = _emailSignInState.asStateFlow()
-
-    private val _registerState = MutableStateFlow<RegisterState>(RegisterState.Initial)
-    val registerState: StateFlow<RegisterState> = _registerState.asStateFlow()
+    private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.Initial)
+    val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
     init {
         checkCurrentUser()
@@ -36,148 +26,107 @@ class AuthViewModel @Inject constructor(
 
     private fun checkCurrentUser() {
         val currentUser = authUseCases.getCurrentUser()
-        if (currentUser != null) {
-            _authState.value = AuthState.Authenticated(currentUser)
-        } else {
-            _authState.value = AuthState.Unauthenticated
+        if (currentUser == null) {
+            _uiState.value = AuthUiState.Unauthenticated
+            return
+        }
+
+        // Nếu tìm thấy user trên Firebase Auth, phải check xem họ có data trong Firestore chưa
+        _uiState.value = AuthUiState.Loading // Hiện loading nhẹ để check
+        viewModelScope.launch {
+            // Bạn có thể gọi hàm getUserData có sẵn trong Repo (thông qua UseCases)
+            authUseCases.getUserDataUseCase(currentUser.uid).fold(
+                onSuccess = { data ->
+                    if (data.isNotEmpty()) {
+                        // Đã có data -> User cũ hợp lệ -> Vào thẳng Main
+                        _uiState.value = AuthUiState.Authenticated(currentUser)
+                    } else {
+                        // Chưa có data -> User dở dang từ luồng Google -> Đá về màn hình đăng ký hoàn thiện!
+                        _uiState.value = AuthUiState.NeedRegistration(currentUser.email ?: "")
+                    }
+                },
+                onFailure = {
+                    // Lỗi kết nối hoặc không tìm thấy data -> Coi như chưa đăng nhập an toàn
+                    _uiState.value = AuthUiState.Unauthenticated
+                }
+            )
         }
     }
 
     fun signInWithGoogle(idToken: String) {
-        _googleSignInState.value = GoogleSignInState.Loading
+        _uiState.value = AuthUiState.Loading // ➔ Bật xoay xoay loading chung
         viewModelScope.launch {
-            try {
-                val result = authUseCases.signInWithGoogle(idToken)
-                result.fold(
-                    onSuccess = { (user, userExists) ->
-                        if (userExists) {
-                            // Người dùng đã tồn tại - Đăng nhập thành công
-                            _googleSignInState.value = GoogleSignInState.Success(user)
-                            _authState.value = AuthState.Authenticated(user)
-                        } else {
-                            // Người dùng chưa tồn tại - chuyển đến màn hình đăng ký
-                            _googleSignInState.value = GoogleSignInState.NeedRegistration(user.email ?: "")
-                        }
-                    },
-                    onFailure = { exception ->
-                        _googleSignInState.value = GoogleSignInState.Error(exception.message ?: "Đăng nhập thất bại")
+            authUseCases.signInWithGoogle(idToken).fold(
+                onSuccess = { (user, userExists) ->
+                    _uiState.value = if (userExists) {
+                        AuthUiState.Authenticated(user)
+                    } else {
+                        AuthUiState.NeedRegistration(user.email ?: "")
                     }
-                )
-            } catch (e: Exception) {
-                _googleSignInState.value = GoogleSignInState.Error(e.message ?: "Đăng nhập thất bại")
-            }
+                },
+                onFailure = { exception ->
+                    _uiState.value = AuthUiState.Error(exception.message ?: "Đăng nhập thất bại")
+                }
+            )
+        }
+    }
+
+    fun cancelGoogleSignIn() {
+        viewModelScope.launch {
+            authUseCases.signOut()
+            _uiState.value = AuthUiState.Unauthenticated
         }
     }
 
     fun loginWithEmail(email: String, password: String) {
         if (email.isBlank() || password.isBlank()) {
-            _emailSignInState.value = EmailSignInState.Error("Email và mật khẩu không được để trống")
+            _uiState.value = AuthUiState.Error("Email và mật khẩu không được để trống")
             return
         }
 
-        _emailSignInState.value = EmailSignInState.Loading
+        _uiState.value = AuthUiState.Loading
         viewModelScope.launch {
-            try {
-                val result = authUseCases.loginWithEmail(email, password)
-                result.fold(
-                    onSuccess = { user ->
-                        _emailSignInState.value = EmailSignInState.Success(user)
-                        _authState.value = AuthState.Authenticated(user)
-                    },
-                    onFailure = { exception ->
-                        _emailSignInState.value = EmailSignInState.Error(exception.message ?: "Đăng nhập thất bại")
-                    }
-                )
-            } catch (e: Exception) {
-                _emailSignInState.value = EmailSignInState.Error(e.message ?: "Đăng nhập thất bại")
-            }
+            authUseCases.loginWithEmail(email, password).fold(
+                onSuccess = { user -> _uiState.value = AuthUiState.Authenticated(user) },
+                onFailure = { exception -> _uiState.value = AuthUiState.Error(exception.message ?: "Đăng nhập thất bại") }
+            )
         }
     }
 
     fun register(email: String, password: String, displayName: String) {
         if (email.isBlank() || password.isBlank() || displayName.isBlank()) {
-            _registerState.value = RegisterState.Error("Các trường thông tin không được để trống")
+            _uiState.value = AuthUiState.Error("Các trường thông tin không được để trống")
             return
         }
 
-        _registerState.value = RegisterState.Loading
+        _uiState.value = AuthUiState.Loading
         viewModelScope.launch {
-            try {
-                val result = authUseCases.saveUserToFirebaseUseCase(email, password, displayName)
-                result.fold(
-                    onSuccess = { user ->
-                        _registerState.value = RegisterState.Success(user)
-                        _authState.value = AuthState.Authenticated(user)
-                    },
-                    onFailure = { exception ->
-                        val errorMessage = when {
-                            exception.message?.contains("already been linked", ignoreCase = true) == true ->
-                                "Tài khoản này đã được đăng ký trước đó"
-                            exception.message?.contains("email", ignoreCase = true) == true ->
-                                "Email không hợp lệ"
-                            exception.message?.contains("password", ignoreCase = true) == true ->
-                                "Mật khẩu phải có ít nhất 6 ký tự"
-                            else -> exception.message ?: "Đăng ký thất bại"
-                        }
-                        _registerState.value = RegisterState.Error(errorMessage)
-                    }
-                )
-            } catch (e: Exception) {
-                val errorMessage = when {
-                    e.message?.contains("already been linked", ignoreCase = true) == true ->
-                        "Tài khoản này đã được đăng ký trước đó"
-                    else -> e.message ?: "Đăng ký thất bại"
+            // Gọi UseCase -> UseCase tự chạy bộ lọc Validate bên trong nó
+            authUseCases.saveUserToFirebaseUseCase(email, password, displayName).fold(
+                onSuccess = { user ->
+                    _uiState.value = AuthUiState.Authenticated(user)
+                },
+                onFailure = { exception ->
+                    // Nếu UseCase quăng ra lỗi Validate hoặc Firebase trả về lỗi,
+                    // chúng ta chỉ cần hốt cái message đó đưa thẳng lên UI
+                    _uiState.value = AuthUiState.Error(exception.message ?: "Đăng ký thất bại")
                 }
-                _registerState.value = RegisterState.Error(errorMessage)
-            }
+            )
         }
     }
-
-
-    fun signOut() {
-        viewModelScope.launch {
-            authUseCases.signOut()
-            _authState.value = AuthState.Unauthenticated
-            // Reset các state khác
-            _googleSignInState.value = GoogleSignInState.Initial
-            _emailSignInState.value = EmailSignInState.Initial
-            _registerState.value = RegisterState.Initial
-        }
-    }
-
-    fun resetStates() {
-        _googleSignInState.value = GoogleSignInState.Initial
-        _emailSignInState.value = EmailSignInState.Initial
-        _registerState.value = RegisterState.Initial
-    }
 }
 
-// Các sealed class để quản lý state
+sealed class AuthUiState {
+    object Initial : AuthUiState()
+    object Loading : AuthUiState()
+    object Unauthenticated : AuthUiState()
 
-sealed class AuthState {
-    object Initial : AuthState()
-    object Unauthenticated : AuthState()
-    data class Authenticated(val user: FirebaseUser) : AuthState()
-}
+    // Đăng nhập/Đăng ký thành công thì nhảy vào đây
+    data class Authenticated(val user: FirebaseUser) : AuthUiState()
 
-sealed class GoogleSignInState {
-    object Initial : GoogleSignInState()
-    object Loading : GoogleSignInState()
-    data class Success(val user: FirebaseUser) : GoogleSignInState()
-    data class NeedRegistration(val email: String) : GoogleSignInState()
-    data class Error(val message: String) : GoogleSignInState()
-}
+    // Case đặc biệt của Google: Đăng nhập được nhưng chưa có tài khoản ở DB
+    data class NeedRegistration(val email: String) : AuthUiState()
 
-sealed class EmailSignInState {
-    object Initial : EmailSignInState()
-    object Loading : EmailSignInState()
-    data class Success(val user: FirebaseUser) : EmailSignInState()
-    data class Error(val message: String) : EmailSignInState()
-}
-
-sealed class RegisterState {
-    object Initial : RegisterState()
-    object Loading : RegisterState()
-    data class Success(val user: FirebaseUser) : RegisterState()
-    data class Error(val message: String) : RegisterState()
+    // Có lỗi xảy ra (bất kể lỗi từ nguồn nào)
+    data class Error(val message: String) : AuthUiState()
 }

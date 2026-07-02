@@ -137,30 +137,4 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun registerWithEmail(
-        email: String,
-        password: String,
-        displayName: String
-    ): Result<FirebaseUser> {
-        return try {
-            val result = firebaseAuth.createUserWithEmailAndPassword(email, password).await()
-            val user = result.user ?: return Result.failure(Exception("Đăng ký thất bại"))
-            // Update display name
-            val profileUpdates = com.google.firebase.auth.UserProfileChangeRequest.Builder()
-                .setDisplayName(displayName)
-                .build()
-            user.updateProfile(profileUpdates).await()
-            // Save to Firestore
-            val userData = hashMapOf(
-                "email" to email,
-                "displayName" to displayName,
-                "avatar_url" to "R.drawable.avt_default",
-                "createdAt" to System.currentTimeMillis()
-            )
-            firestore.collection("users").document(user.uid).set(userData).await()
-            Result.success(user)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
 }

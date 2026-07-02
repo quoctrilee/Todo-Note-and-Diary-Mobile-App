@@ -1,6 +1,7 @@
 package com.example.todonotediary.presentation.auth
 
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,6 +28,7 @@ import androidx.navigation.NavController
 import com.example.todonotediary.presentation.navigation.AuthRoute
 import com.example.todonotediary.presentation.navigation.MainScreenRoute
 import com.example.todonotediary.presentation.navigation.RegisterRoute
+import com.example.todonotediary.presentation.splash.SplashUI
 
 @Composable
 fun RegisterScreen(
@@ -41,58 +43,49 @@ fun RegisterScreen(
     var displayName by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(false) }
-    var isGoogleLogin by remember { mutableStateOf(email != null && email.isNotEmpty()) }
 
-    val registerState by viewModel.registerState.collectAsState()
+    // Nhận diện trạng thái nguồn gốc đăng ký
+    val isGoogleLogin = remember { email != null && email.isNotEmpty() }
 
-    // Định nghĩa màu sắc
+    // Lắng nghe trạng thái UI từ ViewModel
+    val uiState by viewModel.uiState.collectAsState()
+
     val primaryColor = Color(0xFF6B8E9B)
-    val backgroundColor = Color(0xFFF8F9FA)
     val textColor = Color(0xFF2C3E50)
     val buttonColor = Color(0xFF4A7186)
     val accentColor = Color(0xFFEC9A73)
 
-    // Handle state changes
-    LaunchedEffect(registerState) {
-        when (registerState) {
-            is RegisterState.Loading -> {
-                isLoading = true
-            }
-            is RegisterState.Success -> {
-                isLoading = false
+    BackHandler(enabled = isGoogleLogin) {
+        viewModel.cancelGoogleSignIn()
+        navController.navigate(AuthRoute) {
+            popUpTo<RegisterRoute> { inclusive = true }
+        }
+    }
+    // Điều phối luồng màn hình sau khi tương tác với Firebase xong
+    LaunchedEffect(uiState) {
+        when (uiState) {
+            is AuthUiState.Authenticated -> {
                 Toast.makeText(context, "Đăng ký thành công", Toast.LENGTH_SHORT).show()
                 navController.navigate(MainScreenRoute) {
                     popUpTo<AuthRoute> { inclusive = true }
                 }
-                viewModel.resetStates()
             }
-            is RegisterState.Error -> {
-                isLoading = false
-                Toast.makeText(
-                    context,
-                    (registerState as RegisterState.Error).message,
-                    Toast.LENGTH_SHORT
-                ).show()
+            is AuthUiState.Error -> {
+                Toast.makeText(context, (uiState as AuthUiState.Error).message, Toast.LENGTH_SHORT).show()
             }
-            else -> {
-                isLoading = false
-            }
+            else -> {}
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        if (isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.align(Alignment.Center),
-                color = primaryColor
-            )
-        } else {
+    if (uiState is AuthUiState.Loading || uiState is AuthUiState.Authenticated) {
+        SplashUI(showProgress = true)
+    } else {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -100,7 +93,7 @@ fun RegisterScreen(
                     .fillMaxWidth(0.9f)
                     .verticalScroll(rememberScrollState())
             ) {
-                // Title with indication if from Google
+                // Tiêu đề động tùy theo ngữ cảnh đăng ký
                 Text(
                     text = if (isGoogleLogin) "Hoàn thành đăng ký Google" else "Đăng ký tài khoản",
                     color = primaryColor,
@@ -110,20 +103,19 @@ fun RegisterScreen(
                     modifier = Modifier.padding(bottom = 24.dp, top = 24.dp)
                 )
 
-                // If from Google auth, show information message
                 if (isGoogleLogin) {
                     Text(
-                        text = "Vui lòng thiết lập mật khẩu để hoàn tất đăng ký tài khoản Google",
+                        text = "Vui lòng hoàn tất thông tin cho tài khoản Google của bạn",
                         color = textColor,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
                 }
 
-                // Email TextField
+                // Ô nhập Email (Khóa không cho sửa nếu là tài khoản liên kết Google)
                 OutlinedTextField(
                     value = userEmail,
-                    onValueChange = { userEmail = it },
+                    onValueChange = { if (!isGoogleLogin) userEmail = it },
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp)),
@@ -132,21 +124,21 @@ fun RegisterScreen(
                         Icon(
                             imageVector = Icons.Default.Email,
                             contentDescription = "Email",
-                            tint = primaryColor
+                            tint = if (isGoogleLogin) primaryColor.copy(alpha = 0.6f) else primaryColor
                         )
                     },
-                    enabled = !isGoogleLogin, // Disable if email was passed from Google
+                    readOnly = isGoogleLogin, // 🌟 Người dùng Google chỉ có thể xem chứ không thể sửa đổi
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = primaryColor,
+                        focusedBorderColor = if (isGoogleLogin) Color.LightGray else primaryColor,
                         unfocusedBorderColor = Color.LightGray,
-                        focusedLabelColor = primaryColor,
+                        focusedLabelColor = if (isGoogleLogin) Color.Gray else primaryColor,
                         cursorColor = primaryColor,
-                        disabledBorderColor = Color.LightGray,
-                        disabledTextColor = textColor.copy(alpha = 0.8f)
+                        focusedTextColor = if (isGoogleLogin) textColor.copy(alpha = 0.7f) else textColor,
+                        unfocusedTextColor = if (isGoogleLogin) textColor.copy(alpha = 0.7f) else textColor
                     )
                 )
 
-                // DisplayName TextField
+                // Ô nhập Tên hiển thị
                 OutlinedTextField(
                     value = displayName,
                     onValueChange = { displayName = it },
@@ -169,7 +161,7 @@ fun RegisterScreen(
                     )
                 )
 
-                // Password TextField
+                // Ô nhập Mật khẩu
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
@@ -203,7 +195,7 @@ fun RegisterScreen(
                     )
                 )
 
-                // Confirm Password TextField
+                // Ô Xác nhận Mật khẩu
                 OutlinedTextField(
                     value = confirmPassword,
                     onValueChange = { confirmPassword = it },
@@ -237,20 +229,17 @@ fun RegisterScreen(
                     )
                 )
 
-                // Register Button
+                // Nút Kích hoạt Đăng ký
                 Button(
                     onClick = {
                         if (password != confirmPassword) {
                             Toast.makeText(context, "Mật khẩu xác nhận không khớp", Toast.LENGTH_SHORT).show()
                             return@Button
                         }
-
                         if (password.length < 6) {
                             Toast.makeText(context, "Mật khẩu phải có ít nhất 6 ký tự", Toast.LENGTH_SHORT).show()
                             return@Button
                         }
-
-                        // Gọi hàm register để lưu thông tin người dùng
                         viewModel.register(userEmail, password, displayName)
                     },
                     modifier = Modifier
@@ -267,36 +256,34 @@ fun RegisterScreen(
                     )
                 }
 
-                // Điều hướng đến màn hình đăng nhập
+                // Khối điều hướng quay lại Đăng nhập bằng Email truyền thống
                 Row(
                     horizontalArrangement = Arrangement.Center,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxWidth()
+                    Text(
+                        modifier = Modifier
+                            .padding(top = 32.dp)
+                            .alignByBaseline(),
+                        text = "Đã có tài khoản? ",
+                        color = textColor
+                    )
+                    TextButton(
+                        onClick = {
+                            if (isGoogleLogin) {
+                                viewModel.cancelGoogleSignIn()
+                            }
+                            navController.navigate(AuthRoute) {
+                                popUpTo<RegisterRoute> { inclusive = true }
+                            }
+                        },
+                        modifier = Modifier.alignByBaseline()
                     ) {
                         Text(
-                            modifier = Modifier
-                                .padding(top = 32.dp)
-                                .alignByBaseline(), // Đảm bảo căn chỉnh theo baseline
-                            text = "Đã có tài khoản? ",
-                            color = textColor
+                            text = "Đăng nhập",
+                            color = accentColor,
+                            fontWeight = FontWeight.Bold
                         )
-                        TextButton(
-                            onClick = {
-                                navController.navigate(AuthRoute) {
-                                    popUpTo<RegisterRoute> { inclusive = true }
-                                }
-                            },
-                            modifier = Modifier.alignByBaseline() // Giúp căn chỉnh theo baseline chữ
-                        ) {
-                            Text(
-                                text = "Đăng nhập",
-                                color = accentColor,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
                     }
                 }
 

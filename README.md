@@ -1,45 +1,80 @@
-﻿# Todo Note Diary
+# 📝 Todo Note Diary
 
-Ứng dụng Android cho phép quản lý việc cần làm, ghi chú và nhật ký cá nhân trên cùng một giao diện. Dự án được xây dựng bằng Kotlin, Jetpack Compose, Hilt, Room, Firebase và tích hợp Groq API cho các tính năng AI/liên quan đến xử lý nội dung.
+[![Kotlin](https://img.shields.io/badge/Kotlin-1.9+-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
+[![Compose](https://img.shields.io/badge/Jetpack_Compose-1.5+-4285F4?style=for-the-badge&logo=android&logoColor=white)](https://developer.android.com/jetpack/compose)
+[![Hilt](https://img.shields.io/badge/Dagger_Hilt-DI-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://developer.android.com/training/dependency-injection/hilt-android)
+[![Firebase](https://img.shields.io/badge/Firebase-Sync-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
 
-## Tính năng chính
+**Todo Note Diary** là ứng dụng Android hiện đại giúp người dùng quản lý công việc hàng ngày (Todo), ghi chú nhanh (Note) và viết nhật ký cá nhân (Diary) trên cùng một giao diện trực quan. Ứng dụng được thiết kế theo mô hình **Offline-first**, tích hợp AI để tối ưu hóa trải nghiệm người dùng.
 
-- Quản lý todo, note và diary.
-- Đăng nhập và đồng bộ dữ liệu với Firebase.
-- Lưu dữ liệu cục bộ bằng Room.
-- Gọi Groq API qua Retrofit.
-- Hỗ trợ giọng nói, nhắc lại và đồng bộ nền.
+---
 
-## Yêu cầu môi trường
+## 🚀 Điểm Nhấn Kỹ Thuật (Cho Nhà Tuyển Dụng)
 
-- Android Studio mới nhất.
-- JDK 17.
-- Android SDK với `minSdk = 24` và `targetSdk = 35`.
-- Một dự án Firebase đã được cấu hình.
+Dự án được xây dựng dựa trên các tiêu chuẩn phát triển Android hiện đại, tập trung vào tính đóng gói, dễ bảo trì và khả năng mở rộng:
 
-## Cấu hình trước khi chạy
+*   **Kiến trúc sạch (Clean Architecture)**: Phân tách rõ ràng thành 3 lớp độc lập:
+    *   `presentation`: UI xây dựng 100% bằng **Jetpack Compose** theo mô hình **MVVM (Model-View-ViewModel)**.
+    *   `domain`: Chứa logic nghiệp vụ cốt lõi (Business Logic), Use Cases độc lập với UI và Data Source.
+    *   `data`: Triển khai Repository, xử lý dữ liệu local (**Room DB**) và remote (**Firebase Firestore** / **Retrofit**).
+*   **Offline-first Architecture**: Dữ liệu được lưu trữ trực tiếp dưới Local (Room DB) đóng vai trò là *Single Source of Truth*, giúp app chạy mượt mà ngay cả khi không có mạng, và tự động đồng bộ lên Firebase khi trực tuyến qua **WorkManager**.
+*   **Dependency Injection**: Sử dụng **Dagger-Hilt** quản lý vòng đời và tiêm phụ thuộc (Dependency Injection) toàn cục.
+*   **Reactive Programming**: Sử dụng **Kotlin Coroutines** và **Flow** để xử lý các tác vụ bất đồng bộ, cập nhật UI thời gian thực và quản lý tài nguyên hiệu quả.
+*   **AI Integration**: Tích hợp **Groq LLM** thông qua **Retrofit** để phân tích, tóm tắt và hỗ trợ viết nhật ký/ghi chú thông minh.
 
-1. Tạo project trên Firebase Console.
-2. Thêm ứng dụng Android với package name `com.example.todonotediary`.
-3. Tải `google-services.json` và đặt vào thư mục `app/`.
-4. Bật các dịch vụ cần dùng trong Firebase, tối thiểu là Authentication và Firestore.
-5. Lấy `web client id` từ Google Sign-In / Firebase Authentication và cấu hình vào màn hình đăng nhập nếu dự án yêu cầu.
-6. Thêm Groq API key vào file `local.properties` ở thư mục gốc của dự án:
+---
 
-```properties
-groq.api.key=YOUR_GROQ_API_KEY
+## 🛠️ Tech Stack & Thư Viện Sử Dụng
+
+*   **Language**: Kotlin
+*   **UI Framework**: Jetpack Compose (Navigation, Material 3)
+*   **Local Database**: Room DB
+*   **Cloud Backend**: Firebase Authentication (Google Sign-In), Cloud Firestore
+*   **Networking**: Retrofit, OkHttp, Gson
+*   **Dependency Injection**: Dagger Hilt
+*   **Background Tasks**: WorkManager
+*   **AI Engine**: Groq API (LLM)
+
+---
+
+## 📁 Cấu Trúc Thư Mục Chính
+
+```text
+app/src/main/java/com/example/todonotediary/
+├── data/          # Cấu hình Room Database, Firebase API, Repositories Implementation
+├── di/            # Cấu hình Dagger Hilt Dependency Injection Modules
+├── domain/        # Models, Repository Interfaces, và Business Use Cases
+├── presentation/  # Jetpack Compose UI (Screens, Components) & ViewModels
+│   ├── ai/        # Giao diện/Xử lý hỗ trợ AI với Groq LLM
+│   ├── auth/      # Đăng nhập Google Sign-In & Đăng ký
+│   ├── diary/     # Quản lý nhật ký cá nhân
+│   ├── note/      # Quản lý ghi chú nhanh
+│   ├── todo/      # Quản lý công việc hàng ngày
+│   └── navigation/# Điều hướng trong ứng dụng (Compose Navigation)
+└── worker/        # Tác vụ đồng bộ ngầm chạy với WorkManager
 ```
 
-## Chạy dự án
+---
 
+## ⚙️ Cấu Hình Nhanh Để Chạy Dự Án
+
+### 1. Yêu cầu hệ thống
+*   Android Studio mới nhất.
+*   JDK 17.
+*   Thiết bị/Emulator chạy Android SDK 24 (`minSdk`) trở lên.
+
+### 2. Cấu hình Firebase & API Key
+1. Tạo một dự án trên [Firebase Console](https://console.firebase.google.com/).
+2. Thêm ứng dụng Android với package name: `com.example.todonotediary`.
+3. Tải file `google-services.json` đặt vào thư mục `/app`.
+4. Bật **Authentication** (Google Sign-In) và **Cloud Firestore** trên Firebase Console.
+5. Thêm API Key của Groq vào file `local.properties` tại thư mục gốc dự án:
+   ```properties
+   groq.api.key=YOUR_GROQ_API_KEY
+   ```
+
+### 3. Build & Run
+Mở dự án bằng Android Studio, đợi đồng bộ Gradle hoàn chỉnh và nhấn **Run** trên thiết bị hoặc chạy lệnh:
 ```bash
 ./gradlew assembleDebug
 ```
-
-Hoặc mở dự án bằng Android Studio và chạy trực tiếp trên thiết bị/emulator.
-
-## Ghi chú
-
-- Nếu thiếu `google-services.json`, ứng dụng sẽ không khởi tạo được phần Firebase.
-- Nếu thiếu `groq.api.key`, các tính năng gọi Groq API sẽ không hoạt động.
-- Dự án sử dụng Compose, Hilt, Room và WorkManager, nên lần build đầu tiên có thể mất thêm thời gian.
